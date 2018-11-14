@@ -25,7 +25,7 @@ namespace WeatherJournalEntry {
         public void ConfigureServices(IServiceCollection services) {
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
 
-            services.AddDbContext<DataContext>(options =>
+            services.AddDbContext<WeatherContext>(options =>
                options.UseSqlite("Filename=./weather_database.sqlite")
             );
         }
