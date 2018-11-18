@@ -11,10 +11,11 @@ namespace WeatherJournalEntry.Model {
     }
 
     public class Weather {
-        public int Id { get; set; }
+        public int Id { get; set; }                             // Weather condition id
         public string Main { get; set; }
         public string Description { get; set; }
         public string Icon { get; set; }
+        public int WeatherId { get; set; }
 
         public virtual int WeatherObjectId { get; set; }
         public virtual WeatherObject WeatherObject { get; set; }
@@ -35,7 +36,7 @@ namespace WeatherJournalEntry.Model {
 
     public class Wind {
         public double Speed { get; set; }
-        public int Deg { get; set; }
+        public double Deg { get; set; }
 
         public virtual int WeatherObjectId { get; set; }
         public virtual WeatherObject WeatherObject { get; set; }
@@ -70,7 +71,7 @@ namespace WeatherJournalEntry.Model {
         public Clouds Clouds { get; set; }
         public int Dt { get; set; }
         public Sys Sys { get; set; }
-        public int Id { get; set; }
+        public int Id { get; set; }                               // City id  
         public string Name { get; set; }
         public int Cod { get; set; }
 

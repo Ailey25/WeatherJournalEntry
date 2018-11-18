@@ -12,11 +12,11 @@ namespace WeatherJournalEntry.Controllers {
 
         public WeatherAPI() {}
 
-        // Performs API call by City ID
+        // Performs API call using url
         // Return JSON string
-        public async Task<string> CallByCityID(string cityID) {
+        public async Task<string> GetWeatherObjectFromAPI(string url) {
             // URL
-            string urlParam = "weather?id=" + cityID + API_PARAM_KEY;
+            string urlParam = url + API_PARAM_KEY;
 
             // Set up
             HttpClient client = new HttpClient();
@@ -28,9 +28,9 @@ namespace WeatherJournalEntry.Controllers {
                 // Parse response
                 var dataObjectString = response.Content.ReadAsStringAsync().Result;
                 return dataObjectString;
-            } else {
-                return null;
             }
+
+            return null;
         }
 
         // Parse data string into object
