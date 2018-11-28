@@ -7,7 +7,14 @@ using WeatherJournalEntry.Model;
 
 namespace WeatherJournalEntry.Data {
     public class WeatherContext: DbContext {
-        public WeatherContext(DbContextOptions<WeatherContext> options) : base(options) {}
+        private static bool _created = false;
+        public WeatherContext(DbContextOptions<WeatherContext> options) : base(options) {
+        if (!_created) {
+            _created = true;
+            Database.EnsureDeleted();
+            Database.EnsureCreated();
+        }
+    }
 
         public DbSet<Coord> Coords { get; set; }
         public DbSet<Weather> Weathers { get; set; }
@@ -46,45 +53,45 @@ namespace WeatherJournalEntry.Data {
         }
 
         // GET
-        public async Task<Coord> GetCoord(int weatherObjId) {
+        public async Task<Coord> GetCoord(string weatherObjId) {
             return await Coords
                 .FirstOrDefaultAsync(c => c.WeatherObjectId == weatherObjId);
         }
 
-        public async Task<List<Weather>> GetWeatherList(int weatherObjId) {
+        public async Task<List<Weather>> GetWeatherList(string weatherObjId) {
             var result = await Weathers
                 .Where(w => w.WeatherObjectId == weatherObjId).ToListAsync();
             if (result.Any()) return result;
             return null;
         }
 
-        public async Task<Main> GetMain(int weatherObjId) {
+        public async Task<Main> GetMain(string weatherObjId) {
             return await Mains
                 .FirstOrDefaultAsync(m => m.WeatherObjectId == weatherObjId);
         }
 
-        public async Task<Wind> GetWind(int weatherObjId) {
+        public async Task<Wind> GetWind(string weatherObjId) {
             return await Winds
                 .FirstOrDefaultAsync(w => w.WeatherObjectId == weatherObjId);
         }
 
-        public async Task<Clouds> GetClouds(int weatherObjId) {
+        public async Task<Clouds> GetClouds(string weatherObjId) {
             return await Clouds
                 .FirstOrDefaultAsync(c => c.WeatherObjectId == weatherObjId);
         }
 
-        public async Task<Sys> GetSys(int weatherObjId) {
+        public async Task<Sys> GetSys(string weatherObjId) {
             return await Sys
                 .FirstOrDefaultAsync(s => s.WeatherObjectId == weatherObjId);
         }
 
-        public async Task<WeatherObject> GetWeatherObject(int weatherObjId) {
+        public async Task<WeatherObject> GetWeatherObject(string weatherObjId) {
             return await WeatherObjects
                 .FirstOrDefaultAsync(wo => wo.WeatherObjectId == weatherObjId);
         }
 
         // ADD TO DATABASE
-        public async void AddWeatherObjectToDatabase(WeatherObject weatherObject, int weatherObjId) {
+        public async void AddWeatherObjectToDatabase(WeatherObject weatherObject, string weatherObjId) {
             await Database.EnsureCreatedAsync();
             weatherObject.WeatherObjectId = weatherObjId;
             WeatherObjects.Add(weatherObject);
@@ -92,7 +99,7 @@ namespace WeatherJournalEntry.Data {
         }
 
         // DELETE
-        public async Task<string> DeleteWeatherList(int weatherObjId) {
+        public async Task<string> DeleteWeatherList(string weatherObjId) {
             var list = await Weathers.Where(w => w.WeatherObjectId == weatherObjId).ToListAsync();
             if (list.Any()) {
                 list.ForEach(elem => Remove(elem));

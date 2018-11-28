@@ -6,7 +6,7 @@ namespace WeatherJournalEntry.Model {
         public double Lon { get; set; }
         public double Lat { get; set; }
 
-        public virtual int WeatherObjectId { get; set; }
+        public virtual string WeatherObjectId { get; set; }
         public virtual WeatherObject WeatherObject { get; set; }
     }
 
@@ -17,7 +17,7 @@ namespace WeatherJournalEntry.Model {
         public string Icon { get; set; }
         public int WeatherId { get; set; }
 
-        public virtual int WeatherObjectId { get; set; }
+        public virtual string WeatherObjectId { get; set; }
         public virtual WeatherObject WeatherObject { get; set; }
     }
 
@@ -30,7 +30,7 @@ namespace WeatherJournalEntry.Model {
         public double Sea_level { get; set; }
         public double Grnd_level { get; set; }
 
-        public virtual int WeatherObjectId { get; set; }
+        public virtual string WeatherObjectId { get; set; }
         public virtual WeatherObject WeatherObject { get; set; }
     }
 
@@ -38,14 +38,14 @@ namespace WeatherJournalEntry.Model {
         public double Speed { get; set; }
         public double Deg { get; set; }
 
-        public virtual int WeatherObjectId { get; set; }
+        public virtual string WeatherObjectId { get; set; }
         public virtual WeatherObject WeatherObject { get; set; }
     }
 
     public class Clouds {
         public int All { get; set; }
 
-        public virtual int WeatherObjectId { get; set; }
+        public virtual string WeatherObjectId { get; set; }
         public virtual WeatherObject WeatherObject { get; set; }
     }
 
@@ -57,7 +57,7 @@ namespace WeatherJournalEntry.Model {
         public int Sunrise { get; set; }
         public int Sunset { get; set; }
 
-        public virtual int WeatherObjectId { get; set; }
+        public virtual string WeatherObjectId { get; set; }
         public virtual WeatherObject WeatherObject { get; set; }
     }
 
@@ -75,6 +75,6 @@ namespace WeatherJournalEntry.Model {
         public string Name { get; set; }
         public int Cod { get; set; }
 
-        public int WeatherObjectId { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 }

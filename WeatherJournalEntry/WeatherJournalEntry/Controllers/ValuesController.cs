@@ -44,33 +44,29 @@ namespace WeatherJournalEntry.Controllers {
         public async Task<ActionResult<object>> GetRowInTable(
             string objectType, string weatherObjectId, string weatherId
         ) {
-            int intWeatherObjId = 0;
-            if (!(Int32.TryParse(weatherObjectId, out intWeatherObjId))) {
-                return BadRequest("Failed: id cannot be converted to int");
-            }
 
             ActionResult<object> result = null;
             switch (objectType) {
                 case COORD:
-                    result = await weatherContext.GetCoord(intWeatherObjId);
+                    result = await weatherContext.GetCoord(weatherObjectId);
                     break;
                 case WEATHER:
-                    result = await weatherContext.GetWeatherList(intWeatherObjId);
+                    result = await weatherContext.GetWeatherList(weatherObjectId);
                     break;
                 case MAIN:
-                    result = await weatherContext.GetMain(intWeatherObjId);
+                    result = await weatherContext.GetMain(weatherObjectId);
                     break;
                 case WIND:
-                    result = await weatherContext.GetWind(intWeatherObjId);
+                    result = await weatherContext.GetWind(weatherObjectId);
                     break;
                 case CLOUDS:
-                    result = await weatherContext.GetClouds(intWeatherObjId);
+                    result = await weatherContext.GetClouds(weatherObjectId);
                     break;
                 case SYS:
-                    result = await weatherContext.GetSys(intWeatherObjId);
+                    result = await weatherContext.GetSys(weatherObjectId);
                     break;
                 case WEATHER_OBJECT:
-                    result = await weatherContext.GetWeatherObject(intWeatherObjId);
+                    result = await weatherContext.GetWeatherObject(weatherObjectId);
                     break;
                 default:
                     return BadRequest("Failed: Check object type parameter");
@@ -88,13 +84,9 @@ namespace WeatherJournalEntry.Controllers {
             string callTypeAPI, string weatherObjIdToAssign,
             string callParameter1, string callParameter2 = ""
         ) {
-            var intWeatherObjId = 0;
-            if (!(Int32.TryParse(weatherObjIdToAssign, out intWeatherObjId))) {
-                return BadRequest("Failed: given id cannot be converted to int");
-            }
 
             // Check if weather object id to be assigned already exists
-            var wo = await weatherContext.GetWeatherObject(intWeatherObjId);
+            var wo = await weatherContext.GetWeatherObject(weatherObjIdToAssign);
             if (wo != null) {
                 return BadRequest("Failed: weather object " + weatherObjIdToAssign + " already exists");
             }
@@ -131,7 +123,7 @@ namespace WeatherJournalEntry.Controllers {
 
             // Parse string into object and add to database
             var weatherObj = weatherAPI.ParseWeatherDataObject(responseStr);
-            weatherContext.AddWeatherObjectToDatabase(weatherObj, intWeatherObjId);
+            weatherContext.AddWeatherObjectToDatabase(weatherObj, weatherObjIdToAssign);
             return Ok("Success: object added to database " + responseStr);
         }
 
@@ -145,32 +137,28 @@ namespace WeatherJournalEntry.Controllers {
         public async Task<ActionResult<string>> Delete(
             string objectType, string weatherObjectId
         ) {
-            var intWeatherObjId = 0;
-            if (!(Int32.TryParse(weatherObjectId, out intWeatherObjId))) {
-                return BadRequest("Failed: id cannot be converted to int");
-            }
 
             ActionResult<object> obj = null;
             switch (objectType) {
                 case COORD:
-                    obj = await weatherContext.GetCoord(intWeatherObjId);
+                    obj = await weatherContext.GetCoord(weatherObjectId);
                     break;
                 case WEATHER:
-                    return await weatherContext.DeleteWeatherList(intWeatherObjId);
+                    return await weatherContext.DeleteWeatherList(weatherObjectId);
                 case MAIN:
-                    obj = await weatherContext.GetMain(intWeatherObjId);
+                    obj = await weatherContext.GetMain(weatherObjectId);
                     break;
                 case WIND:
-                    obj = await weatherContext.GetWind(intWeatherObjId);
+                    obj = await weatherContext.GetWind(weatherObjectId);
                     break;
                 case CLOUDS:
-                    obj = await weatherContext.GetClouds(intWeatherObjId);
+                    obj = await weatherContext.GetClouds(weatherObjectId);
                     break;
                 case SYS:
-                    obj = await weatherContext.GetSys(intWeatherObjId);
+                    obj = await weatherContext.GetSys(weatherObjectId);
                     break;
                 case WEATHER_OBJECT:
-                    obj = await weatherContext.GetWeatherObject(intWeatherObjId);
+                    obj = await weatherContext.GetWeatherObject(weatherObjectId);
                     break;
                 default:
                     return BadRequest("Failed: Check object type parameter");
