@@ -32,7 +32,7 @@ namespace WeatherJournalEntry.Controllers {
         public ActionResult<IEnumerable<string>> Instructionl() {
             return new string[] {
                 "GET: 'objectType/weatherObjectId' gets an object",
-                "POST: 'objectType/weatherObjectId' adds the object to database",
+                "POST: 'callTypeAPI/weatherObjectIdToAssign/param1/param2' adds the response object to database",
                 "DELETE: 'objectType/weatherObjectId' deletes an object and its dependent tables",
                 "objectType: coord, weather, main, wind, clouds, sys, weatherobject",
                 "callTypeAPI: 'cityname', 'cityid', 'coord'",
@@ -41,7 +41,7 @@ namespace WeatherJournalEntry.Controllers {
 
         // GET api/values/weather/1
         [HttpGet("{objectType}/{weatherObjectId}")]
-        public async Task<ActionResult<object>> GetRowInTable(
+        public async Task<ActionResult<object>> GetObject(
             string objectType, string weatherObjectId, string weatherId
         ) {
 
@@ -78,17 +78,18 @@ namespace WeatherJournalEntry.Controllers {
             return Ok(result.Value);
         }
 
-        // POST api/values/coord/5/123/4566?
+        // POST api/values/cityname/5/Toronto
         [HttpPost("{callTypeAPI}/{weatherObjIdToAssign}/{callParameter1}/{callParameter2?}")]
         public async Task<ActionResult<string>> Post(
             string callTypeAPI, string weatherObjIdToAssign,
             string callParameter1, string callParameter2 = ""
         ) {
 
+            bool isNewObject = true;
             // Check if weather object id to be assigned already exists
             var wo = await weatherContext.GetWeatherObject(weatherObjIdToAssign);
             if (wo != null) {
-                return BadRequest("Failed: weather object " + weatherObjIdToAssign + " already exists");
+                isNewObject = false;
             }
 
             string responseStr = null;
@@ -121,11 +122,34 @@ namespace WeatherJournalEntry.Controllers {
                 return BadRequest("Failed: API call failed");
             }
 
-            // Parse string into object and add to database
-            var weatherObj = weatherAPI.ParseWeatherDataObject(responseStr);
-            weatherContext.AddWeatherObjectToDatabase(weatherObj, weatherObjIdToAssign);
+            // Parse string into object and ADD to or UPDATE in database
+            var newWeatherObj = weatherAPI.ParseWeatherDataObject(responseStr);
+            if (isNewObject) {
+                weatherContext.AddWeatherObjectToDatabase(newWeatherObj, weatherObjIdToAssign);
+            } else {
+                if (!(await weatherContext.UpdateWeatherObject(newWeatherObj, weatherObjIdToAssign))) {
+                    return BadRequest("Object to update not found in database");
+                }
+            }
             return Ok("Success: object added to database " + responseStr);
         }
+
+        //[HttpGet("test/{id}")]
+        //public async Task<ActionResult<List<Weather>>> Test (string test, string id) {
+        //    var jsonStr1 = "{\"coord\":{\"lon\":145.77,\"lat\":-16.92},\"weather\":[{\"id\":802,\"main\":\"Clouds\",\"description\":\"scattered clouds\",\"icon\":\"03n\"}],\"base\":\"stations\",\"main\":{\"temp\":300.15,\"pressure\":1007,\"humidity\":74,\"temp_min\":300.15,\"temp_max\":300.15},\"visibility\":10000,\"wind\":{\"speed\":3.6,\"deg\":160},\"clouds\":{\"all\":40},\"dt\":1485790200,\"sys\":{\"type\":1,\"id\":8166,\"message\":0.2064,\"country\":\"AU\",\"sunrise\":1485720272,\"sunset\":1485766550},\"id\":2172797,\"name\":\"Cairns\",\"cod\":200}";
+        //    var jsonStr2 = "{\"coord\":{\"lon\":139.01,\"lat\":35.02},\"weather\":[{\"id\":800,\"main\":\"Clear\",\"description\":\"clear sky\",\"icon\":\"01n\"}, {\"id\":999,\"main\":\"Test weather\",\"description\":\"rainbow\",\"icon\":\"01n\"}],\"base\":\"stations\",\"main\":{\"temp\":285.514,\"pressure\":1013.75,\"humidity\":100,\"temp_min\":285.514,\"temp_max\":285.514,\"sea_level\":1023.22,\"grnd_level\":1013.75},\"wind\":{\"speed\":5.52,\"deg\":311},\"clouds\":{\"all\":0},\"dt\":1485792967,\"sys\":{\"message\":0.0025,\"country\":\"JP\",\"sunrise\":1485726240,\"sunset\":1485763863},\"id\":1907296,\"name\":\"Tawarano\",\"cod\":200}";
+
+        //    var wo1 = weatherAPI.ParseWeatherDataObject(jsonStr1);
+        //    var wo2 = weatherAPI.ParseWeatherDataObject(jsonStr2);
+
+        //    weatherContext.AddWeatherObjectToDatabase(wo1, id);
+        //    if (await weatherContext.UpdateWeatherObject(wo2, id)) {
+
+        //        var result = await weatherContext.GetWeatherList(id);
+        //        return Ok(result);
+        //    }
+        //    return BadRequest("Something went wrong");
+        //}
 
         // PUT api/values/5
         [HttpPut("{id}")]

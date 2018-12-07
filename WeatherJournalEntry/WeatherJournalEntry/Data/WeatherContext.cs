@@ -58,6 +58,7 @@ namespace WeatherJournalEntry.Data {
                 .FirstOrDefaultAsync(c => c.WeatherObjectId == weatherObjId);
         }
 
+        // Returns null if no result
         public async Task<List<Weather>> GetWeatherList(string weatherObjId) {
             var result = await Weathers
                 .Where(w => w.WeatherObjectId == weatherObjId).ToListAsync();
@@ -91,11 +92,47 @@ namespace WeatherJournalEntry.Data {
         }
 
         // ADD TO DATABASE
-        public async void AddWeatherObjectToDatabase(WeatherObject weatherObject, string weatherObjId) {
-            await Database.EnsureCreatedAsync();
+        public void AddWeatherObjectToDatabase(WeatherObject weatherObject, string weatherObjId) {
+            Database.EnsureCreated();
             weatherObject.WeatherObjectId = weatherObjId;
             WeatherObjects.Add(weatherObject);
             SaveChanges();
+        }
+
+        // UPDATE (currently only updates Main and Weather)
+        public async Task<bool> UpdateWeatherObject(WeatherObject newWeatherObject, string weatherObjId) {
+            //var existingCoord = await GetCoord(weatherObjId);
+
+            var oldWeatherRows = await Weathers
+                .Where(w => w.WeatherObjectId == weatherObjId).ToListAsync();
+            if (oldWeatherRows.Any()) {
+                Weathers.RemoveRange(oldWeatherRows);
+            }
+            SaveChanges();
+            var newWeatherRows = newWeatherObject.Weather;
+            foreach(Weather weather in newWeatherRows) {
+                weather.WeatherObjectId = weatherObjId;
+                Weathers.Add(weather);
+            }
+            SaveChanges();
+
+            var existingMain = await GetMain(weatherObjId);
+            if (existingMain == null) return false;
+            existingMain.Temp = newWeatherObject.Main.Temp;
+            existingMain.Pressure = newWeatherObject.Main.Pressure;
+            existingMain.Humidity = newWeatherObject.Main.Humidity;
+            existingMain.Temp_min = newWeatherObject.Main.Temp_min;
+            existingMain.Temp_max = newWeatherObject.Main.Temp_max;
+            existingMain.Sea_level = newWeatherObject.Main.Sea_level;
+            existingMain.Grnd_level = newWeatherObject.Main.Grnd_level;
+            SaveChanges();
+
+            //var existingWind = await GetWind(weatherObjId);
+            //var existingClouds = await GetClouds(weatherObjId);
+            //var existingSys = await GetSys(weatherObjId);
+            //var existingWeatherObject = await GetWeatherList(weatherObjId);
+
+            return true;
         }
 
         // DELETE
