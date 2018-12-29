@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace WeatherJournalEntry.Model {
+namespace WeatherJournalBackend.Entities {
     public class Coord {
         public double Lon { get; set; }
         public double Lat { get; set; }
-
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObject WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class Weather {
@@ -16,9 +14,7 @@ namespace WeatherJournalEntry.Model {
         public string Description { get; set; }
         public string Icon { get; set; }
         public int WeatherId { get; set; }
-
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObject WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class Main {
@@ -29,24 +25,18 @@ namespace WeatherJournalEntry.Model {
         public double Temp_max { get; set; }
         public double Sea_level { get; set; }
         public double Grnd_level { get; set; }
-
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObject WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class Wind {
         public double Speed { get; set; }
         public double Deg { get; set; }
-
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObject WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class Clouds {
         public int All { get; set; }
-
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObject WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class Sys {
@@ -56,9 +46,7 @@ namespace WeatherJournalEntry.Model {
         public string Country { get; set; }
         public int Sunrise { get; set; }
         public int Sunset { get; set; }
-
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObject WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class WeatherObject {
@@ -71,10 +59,9 @@ namespace WeatherJournalEntry.Model {
         public Clouds Clouds { get; set; }
         public int Dt { get; set; }
         public Sys Sys { get; set; }
-        public int Id { get; set; }                               // City id  
+        public int Id { get; set; }                               // City id
         public string Name { get; set; }
         public int Cod { get; set; }
-
         public string WeatherObjectId { get; set; }
     }
 }

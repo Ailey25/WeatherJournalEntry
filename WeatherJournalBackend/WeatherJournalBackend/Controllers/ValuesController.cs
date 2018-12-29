@@ -3,10 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using WeatherJournalEntry.Data;
-using WeatherJournalEntry.Model;
+using WeatherJournalBackend.Data;
+using WeatherJournalBackend.Entities;
+using WeatherJournalBackend.Services;
 
-namespace WeatherJournalEntry.Controllers {
+namespace WeatherJournalBackend.Controllers {
     [Route("api/[controller]")]
     [ApiController]
     public class ValuesController : ControllerBase {
@@ -19,11 +20,11 @@ namespace WeatherJournalEntry.Controllers {
         private const string WEATHER_OBJECT = "weatherobject";
         private const string CITY_NAME = "cityname";
         private const string CITY_ID = "cityid";
-        private readonly WeatherContext weatherContext;
+        private readonly IWeatherService _weatherService;
         private readonly WeatherAPI weatherAPI;
 
-        public ValuesController(WeatherContext weatherContext) {
-            this.weatherContext = weatherContext;
+        public ValuesController(IWeatherService weatherService) {
+            _weatherService = weatherService;
             weatherAPI = new WeatherAPI();
         }
 
@@ -48,25 +49,25 @@ namespace WeatherJournalEntry.Controllers {
             ActionResult<object> result = null;
             switch (objectType) {
                 case COORD:
-                    result = await weatherContext.GetCoord(weatherObjectId);
+                    result = await _weatherService.GetCoord(weatherObjectId);
                     break;
                 case WEATHER:
-                    result = await weatherContext.GetWeatherList(weatherObjectId);
+                    result = await _weatherService.GetWeatherList(weatherObjectId);
                     break;
                 case MAIN:
-                    result = await weatherContext.GetMain(weatherObjectId);
+                    result = await _weatherService.GetMain(weatherObjectId);
                     break;
                 case WIND:
-                    result = await weatherContext.GetWind(weatherObjectId);
+                    result = await _weatherService.GetWind(weatherObjectId);
                     break;
                 case CLOUDS:
-                    result = await weatherContext.GetClouds(weatherObjectId);
+                    result = await _weatherService.GetClouds(weatherObjectId);
                     break;
                 case SYS:
-                    result = await weatherContext.GetSys(weatherObjectId);
+                    result = await _weatherService.GetSys(weatherObjectId);
                     break;
                 case WEATHER_OBJECT:
-                    result = await weatherContext.GetWeatherObject(weatherObjectId);
+                    result = await _weatherService.GetWeatherObject(weatherObjectId);
                     break;
                 default:
                     return BadRequest("Failed: Check object type parameter");
@@ -87,7 +88,7 @@ namespace WeatherJournalEntry.Controllers {
 
             bool isNewObject = true;
             // Check if weather object id to be assigned already exists
-            var wo = await weatherContext.GetWeatherObject(weatherObjIdToAssign);
+            var wo = await _weatherService.GetWeatherObject(weatherObjIdToAssign);
             if (wo != null) {
                 isNewObject = false;
             }
@@ -125,9 +126,9 @@ namespace WeatherJournalEntry.Controllers {
             // Parse string into object and ADD to or UPDATE in database
             var newWeatherObj = weatherAPI.ParseWeatherDataObject(responseStr);
             if (isNewObject) {
-                weatherContext.AddWeatherObjectToDatabase(newWeatherObj, weatherObjIdToAssign);
+                _weatherService.AddWeatherObject(newWeatherObj, weatherObjIdToAssign);
             } else {
-                if (!(await weatherContext.UpdateWeatherObject(newWeatherObj, weatherObjIdToAssign))) {
+                if (!(await _weatherService.UpdateWeatherObject(newWeatherObj, weatherObjIdToAssign))) {
                     return BadRequest("Object to update not found in database");
                 }
             }
@@ -142,13 +143,18 @@ namespace WeatherJournalEntry.Controllers {
         //    var wo1 = weatherAPI.ParseWeatherDataObject(jsonStr1);
         //    var wo2 = weatherAPI.ParseWeatherDataObject(jsonStr2);
 
-        //    weatherContext.AddWeatherObjectToDatabase(wo1, id);
-        //    if (await weatherContext.UpdateWeatherObject(wo2, id)) {
+        //    //// test update
+        //    //_weatherService.AddWeatherObject(wo1, id);
+        //    //if (await _weatherService.UpdateWeatherObject(wo2, id)) {
 
-        //        var result = await weatherContext.GetWeatherList(id);
-        //        return Ok(result);
-        //    }
-        //    return BadRequest("Something went wrong");
+        //    //    var result = await _weatherService.GetWeatherList(id);
+        //    //    return Ok(result);
+        //    //}
+        //    //return BadRequest("Something went wrong");
+
+        //    //// test get weather object
+        //    //var result = await _weatherService.GetWeatherObject(id);
+        //    //return Ok(result);
         //}
 
         // PUT api/values/5
@@ -165,24 +171,24 @@ namespace WeatherJournalEntry.Controllers {
             ActionResult<object> obj = null;
             switch (objectType) {
                 case COORD:
-                    obj = await weatherContext.GetCoord(weatherObjectId);
+                    obj = await _weatherService.GetCoord(weatherObjectId);
                     break;
                 case WEATHER:
-                    return await weatherContext.DeleteWeatherList(weatherObjectId);
+                    return await _weatherService.DeleteWeatherList(weatherObjectId);
                 case MAIN:
-                    obj = await weatherContext.GetMain(weatherObjectId);
+                    obj = await _weatherService.GetMain(weatherObjectId);
                     break;
                 case WIND:
-                    obj = await weatherContext.GetWind(weatherObjectId);
+                    obj = await _weatherService.GetWind(weatherObjectId);
                     break;
                 case CLOUDS:
-                    obj = await weatherContext.GetClouds(weatherObjectId);
+                    obj = await _weatherService.GetClouds(weatherObjectId);
                     break;
                 case SYS:
-                    obj = await weatherContext.GetSys(weatherObjectId);
+                    obj = await _weatherService.GetSys(weatherObjectId);
                     break;
                 case WEATHER_OBJECT:
-                    obj = await weatherContext.GetWeatherObject(weatherObjectId);
+                    obj = await _weatherService.GetWeatherObject(weatherObjectId);
                     break;
                 default:
                     return BadRequest("Failed: Check object type parameter");
@@ -192,7 +198,7 @@ namespace WeatherJournalEntry.Controllers {
             if (obj == null || obj.Value == null) {
                 return BadRequest("Failed: Id wasn't found in the database");
             } else {
-                weatherContext.DeleteObject(obj.Value);
+                _weatherService.DeleteObject(obj.Value);
                 return Ok("Success: Object deleted from database");
             }
         }

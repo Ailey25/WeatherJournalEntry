@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Net.Http;
 using Newtonsoft.Json;
-using WeatherJournalEntry.Model;
+using WeatherJournalBackend.Entities;
 
-namespace WeatherJournalEntry.Controllers {
+namespace WeatherJournalBackend.Controllers {
     public class WeatherAPI {
         private const string API_URL = "http://api.openweathermap.org/data/2.5/";
         private const string API_PARAM_KEY = "&APPID=b944ebba123deeb1af548d804245dac4";
