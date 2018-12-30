@@ -1,13 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using WeatherJournalBackend.Data;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using WeatherJournalBackend.Dtos;
 using WeatherJournalBackend.Entities;
 using WeatherJournalBackend.Services;
+using WeatherJournalBackend.Helpers;
+using Newtonsoft.Json;
+using AutoMapper;
 
 namespace WeatherJournalBackend.Controllers {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ValuesController : ControllerBase {
@@ -21,10 +30,19 @@ namespace WeatherJournalBackend.Controllers {
         private const string CITY_NAME = "cityname";
         private const string CITY_ID = "cityid";
         private readonly IWeatherService _weatherService;
+        private readonly IUserService _userService;
+        private readonly IMapper _mapper;
+        private readonly IConfiguration Configuration;
         private readonly WeatherAPI weatherAPI;
 
-        public ValuesController(IWeatherService weatherService) {
+        public ValuesController(
+            IWeatherService weatherService, IMapper mapper,
+            IUserService userService, IConfiguration configuration
+        ) {
             _weatherService = weatherService;
+            _userService = userService;
+            _mapper = mapper;
+            Configuration = configuration;
             weatherAPI = new WeatherAPI();
         }
 
@@ -201,6 +219,95 @@ namespace WeatherJournalBackend.Controllers {
                 _weatherService.DeleteObject(obj.Value);
                 return Ok("Success: Object deleted from database");
             }
+        }
+
+        // User controller methods temporarily placed here
+        //[AllowAnonymous]
+        //[HttpPost("user/test")]
+        //public ActionResult<IEnumerable<string>> Test([FromBody] UserDto obj) {
+        //    /*
+        //     {
+        //         "Id" : "id",
+        //         "Username" : "username",
+        //         "FirstName" : "laura",
+        //         "LastName" : "last name here",
+        //         "Password" : "123"
+        //      }
+        //    */
+        //    //var key = Encoding.ASCII.GetBytes(Configuration.GetSection("AppSettings:Secret").Value);
+        //    //return key;
+        //    return new string[] {
+        //       "test" + " " + obj.Id + " " + obj.Username
+        //    };
+        //}
+
+        [AllowAnonymous]
+        [HttpPost("user/authenticate")]
+        public IActionResult Authenticate([FromBody]UserDto userDto) {
+            var user = _userService.Authenticate(userDto.Username, userDto.Password);
+
+            if (user == null) {
+                return BadRequest(new { message = "Username or password is incorrect" });
+            }
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.ASCII.GetBytes(Configuration.GetSection("AppSettings:Secret").Value);
+            var tokenDescriptor = new SecurityTokenDescriptor {
+                Subject = new ClaimsIdentity(new Claim[]
+                {
+                    new Claim(ClaimTypes.Name, user.Id)
+                }),
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            var tokenString = tokenHandler.WriteToken(token);
+
+            // return basic user info (without password) and token to store client side
+            return Ok(new {
+                Id = user.Id,
+                Username = user.Username,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                Token = tokenString
+            });
+        }
+
+        [HttpGet("user/{id}")]
+        public ActionResult<UserDto> Get(string id) {
+            var user = _userService.Get(id);
+            if (user == null) return BadRequest(null);
+            var userDto = _mapper.Map<UserDto>(user);
+            return Ok(userDto);
+        }
+
+        [AllowAnonymous]
+        [HttpPost("user/register")]
+        public ActionResult<string> Register([FromBody]UserDto userDto) {
+            var user = _mapper.Map<User>(userDto);
+            var result = _userService.Create(user, userDto.Password);
+            if (result == "") {
+                return Ok("Success: user registered");
+            }
+            return BadRequest(result);
+        }
+
+        [HttpPost("user/{id}")]
+        public ActionResult<string> Update(string id, [FromBody]UserDto userDto) {
+            var user = _mapper.Map<User>(userDto);
+            user.Id = id;
+
+            var result = _userService.Update(user, userDto.Password);
+            if (result == "") {
+                return Ok("Success: user updated");
+            }
+            return BadRequest(result);
+        }
+
+        [HttpDelete("user/{id}")]
+        public ActionResult<string> Delete(string id) {
+            _userService.Delete(id);
+            return Ok();
         }
     }
 }

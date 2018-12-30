@@ -27,5 +27,6 @@
     <Compile Remove="Dto\WeatherObjectDto.cs" />
     <Compile Remove="New Folder1\WeatherObject.cs" />
     <Compile Remove="Model\WeatherObjectModel.cs" />
+    <Compile Remove="Controllers\WeathersController.cs" />
   </ItemGroup>
 </Project>
