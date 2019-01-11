@@ -221,33 +221,40 @@ namespace WeatherJournalBackend.Controllers {
             }
         }
 
-        // User controller methods temporarily placed here
-        //[AllowAnonymous]
-        //[HttpPost("user/test")]
-        //public ActionResult<IEnumerable<string>> Test([FromBody] UserDto obj) {
-        //    /*
-        //     {
-        //         "Id" : "id",
-        //         "Username" : "username",
-        //         "FirstName" : "laura",
-        //         "LastName" : "last name here",
-        //         "Password" : "123"
-        //      }
-        //    */
-        //    //var key = Encoding.ASCII.GetBytes(Configuration.GetSection("AppSettings:Secret").Value);
-        //    //return key;
-        //    return new string[] {
-        //       "test" + " " + obj.Id + " " + obj.Username
-        //    };
-        //}
+        [AllowAnonymous]
+        [HttpPost("user/register")]
+        public ActionResult<string> Register([FromBody]UserDto userDto) {
+            var user = _mapper.Map<User>(userDto);
+            var userResult = _userService.Create(user, userDto.Password);
+
+            if (userResult == "") {
+                // set user settings if registered osuccessfully
+                _userService.SetSettings(user.Id);
+
+                var successString = JsonConvert.SerializeObject(new {
+                    ok = true,
+                    message = "User registered"
+                });
+                return Ok(successString);
+            } else {
+                var errorString = JsonConvert.SerializeObject(new {
+                    ok = false,
+                    message = "Username already exists"
+                });
+                return BadRequest(errorString);
+            }
+        }
 
         [AllowAnonymous]
         [HttpPost("user/authenticate")]
         public IActionResult Authenticate([FromBody]UserDto userDto) {
-            var user = _userService.Authenticate(userDto.Username, userDto.Password);
-
-            if (user == null) {
-                return BadRequest(new { message = "Username or password is incorrect" });
+            var userObject = _userService.Authenticate(userDto.Username, userDto.Password);
+            var errorString = JsonConvert.SerializeObject(new {
+                ok = false,
+                message = "Username or password is incorrect"
+            });
+            if (userObject == null) {
+                return BadRequest(errorString);
             }
 
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -255,7 +262,7 @@ namespace WeatherJournalBackend.Controllers {
             var tokenDescriptor = new SecurityTokenDescriptor {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Name, user.Id)
+                    new Claim(ClaimTypes.Name, userObject.Id)
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -264,50 +271,134 @@ namespace WeatherJournalBackend.Controllers {
             var tokenString = tokenHandler.WriteToken(token);
 
             // return basic user info (without password) and token to store client side
-            return Ok(new {
-                Id = user.Id,
-                Username = user.Username,
-                FirstName = user.FirstName,
-                LastName = user.LastName,
-                Token = tokenString
+            var successString = JsonConvert.SerializeObject(new {
+                ok = true,
+                user = new {
+                    Id = userObject.Id,
+                    Username = userObject.Username,
+                    FirstName = userObject.FirstName,
+                    LastName = userObject.LastName,
+                    Token = tokenString
+                }
             });
+            return Ok(successString);
         }
 
-        [HttpGet("user/{id}")]
-        public ActionResult<UserDto> Get(string id) {
-            var user = _userService.Get(id);
-            if (user == null) return BadRequest(null);
-            var userDto = _mapper.Map<UserDto>(user);
-            return Ok(userDto);
-        }
+        //[HttpGet("user/{id}")]
+        //public ActionResult<UserDto> Get(string id) {
+        //    var user = _userService.GetUser(id);
+        //    if (user == null) {
+        //        var errorString = JsonConvert.SerializeObject(new {
+        //            ok = false,
+        //            message = "User not found"
+        //        });
+        //        return BadRequest(errorString);
+        //    }
+        //    var userDto = _mapper.Map<UserDto>(user);
+        //    var successString = JsonConvert.SerializeObject(new {
+        //        ok = true,
+        //        user = userDto,
+        //    });
+        //    return Ok(successString);
+        //}
 
-        [AllowAnonymous]
-        [HttpPost("user/register")]
-        public ActionResult<string> Register([FromBody]UserDto userDto) {
+        //[HttpPost("user/{id}")]
+        //public ActionResult<byte[]> Update(string id, [FromBody]UserDto userDto) {
+        //    var user = _mapper.Map<User>(userDto);
+        //    user.Id = id;
+
+        //    var result = _userService.Update(user, userDto.Password);
+        //    if (result == "") {
+        //        return Ok();
+        //    }
+        //    return BadRequest(result);
+        //}
+
+        //[HttpDelete("user/{id}")]
+        //public ActionResult<string> Delete(string id) {
+        //    _userService.Delete(id);
+        //    return Ok();
+        //}
+
+        [HttpPost("user/journal-list")]
+        public async Task<ActionResult<string>> SetJournals([FromBody]UserDto userDto) {
+            bool journalsIsExist = false;
             var user = _mapper.Map<User>(userDto);
-            var result = _userService.Create(user, userDto.Password);
-            if (result == "") {
-                return Ok("Success: user registered");
+            if (_userService.GetUser(user.Id) == null) {
+                var errorString = JsonConvert.SerializeObject(new {
+                    ok = false,
+                    message = "User not found"
+                });
+                return BadRequest(errorString);
             }
-            return BadRequest(result);
+            var journals = _userService.GetJournals(user.Id);
+            if (journals.Result != null) journalsIsExist = true;
+
+            if (journalsIsExist) {
+                if (!(await _userService.UpdateJournals(user.Id, user.Journals))) {
+                    var errorString = JsonConvert.SerializeObject(new {
+                        ok = false,
+                        message = "Could not update journals in database"
+                    });
+                    return BadRequest(errorString);
+                }
+            } else {
+                _userService.AddJournals(user.Id, user.Journals);
+            }
+
+            var successString = JsonConvert.SerializeObject(new {
+                ok = true,
+                message = "Journals updated/added"
+            });
+            return Ok(successString);
         }
 
-        [HttpPost("user/{id}")]
-        public ActionResult<string> Update(string id, [FromBody]UserDto userDto) {
-            var user = _mapper.Map<User>(userDto);
-            user.Id = id;
-
-            var result = _userService.Update(user, userDto.Password);
-            if (result == "") {
-                return Ok("Success: user updated");
-            }
-            return BadRequest(result);
+        [HttpGet("user/journal-list/{userId}")]
+        public async Task<ActionResult<string>> GetJournalList(string userId) {
+            var result = await _userService.GetJournals(userId);
+            var journals = _mapper.Map<List<JournalDto>>(result);
+            var successString1 = JsonConvert.SerializeObject(new {
+                ok = true,
+                journalList = journals,
+            });
+            return Ok(successString1);
         }
 
-        [HttpDelete("user/{id}")]
-        public ActionResult<string> Delete(string id) {
-            _userService.Delete(id);
-            return Ok();
+        [HttpPost("user/settings")]
+        public ActionResult<string> UpdateSettings([FromBody]SettingsDto settingsDto) {
+            var settings = _mapper.Map<Settings>(settingsDto);
+            var result = _userService.UpdateSettings(settings.UserId, settings);
+            if (result.Result) {
+                var successString = JsonConvert.SerializeObject(new {
+                    ok = true,
+                    message = "Settings updated"
+                });
+                return Ok(successString);
+            } else {
+                var errorString = JsonConvert.SerializeObject(new {
+                    ok = false,
+                    message = "Settings not found"
+                });
+                return BadRequest(errorString);
+            }
+        }
+
+        [HttpGet("user/settings/{id}")]
+        public ActionResult<Settings> GetSettings(string id) {
+            var result = _userService.GetSettings(id);
+            if (result.Result == null) {
+                var errorString = JsonConvert.SerializeObject(new {
+                    ok = false,
+                    message = "Settings not found"
+                });
+                return BadRequest(errorString);
+            } else {
+                var successString = JsonConvert.SerializeObject(new {
+                    ok = true,
+                    settings = result.Result
+                });
+                return Ok(successString);
+            }
         }
     }
 }

@@ -14,6 +14,8 @@ namespace WeatherJournalBackend.Helpers {
             CreateMap<WeatherObjectDto, WeatherObject>().ReverseMap();
 
             CreateMap<UserDto, User>().ReverseMap();
+            CreateMap<JournalDto, Journal>().ReverseMap();
+            CreateMap<SettingsDto, Settings>().ReverseMap();
         }
     }
 }

@@ -13,5 +13,20 @@ namespace WeatherJournalBackend.Data {
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<Journal> Journals { get; set; }
+        public DbSet<Settings> Settings { get; set; }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder) {
+            modelBuilder.Entity<User>()
+                        .HasKey(u => u.Id);
+            modelBuilder.Entity<User>()
+                        .HasMany(u => u.Journals);
+
+            modelBuilder.Entity<Journal>()
+                        .HasKey(j => j.JournalId);
+
+            modelBuilder.Entity<Settings>()
+                        .HasKey(s => s.UserId);
+        }
     }
 }

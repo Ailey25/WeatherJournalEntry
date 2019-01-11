@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -8,10 +9,18 @@ using WeatherJournalBackend.Data;
 namespace WeatherJournalBackend.Services {
     public interface IUserService {
         User Authenticate(string username, string password);
-        User Get(string username);
+        User GetUser(string id);
         string Create(User user, string password);
-        string Update(User user, string password);
-        void Delete(string username);
+        //string Update(User user, string password);
+        //void Delete(string username);
+
+        void AddJournals(string userId, List<Journal> journals);
+        Task<List<Journal>> GetJournals(string userId);
+        Task<bool> UpdateJournals(string userId, List<Journal> newJournalList);
+
+        void SetSettings(string userId);
+        Task<Settings> GetSettings(string userId);
+        Task<bool> UpdateSettings(string userId, Settings newSettings);
     }
 
     public class UserService : IUserService {
@@ -36,7 +45,7 @@ namespace WeatherJournalBackend.Services {
             return user;
         }
 
-        public User Get(string id) {
+        public User GetUser(string id) {
             return _context.Users.FirstOrDefault(u => u.Id == id);
         }
 
@@ -55,6 +64,7 @@ namespace WeatherJournalBackend.Services {
 
             user.PasswordHash = passwordHash;
             user.PasswordSalt = passwordSalt;
+            user.Id = Guid.NewGuid().ToString();
 
             _context.Users.Add(user);
             _context.SaveChanges();
@@ -62,47 +72,47 @@ namespace WeatherJournalBackend.Services {
             return "";
         }
 
-        public string Update(User userParam, string password) {
-            var user = Get(userParam.Id);
+        //public string Update(User userParam, string password) {
+        //    var user = GetUser(userParam.Id);
 
-            if (string.IsNullOrWhiteSpace(password)) {
-                return "password cannot be null";
-            }
+        //    if (string.IsNullOrWhiteSpace(password)) {
+        //        return "password cannot be null";
+        //    }
 
-            if (user == null) {
-                return "User not found";
-            }
+        //    if (user == null) {
+        //        return "User not found";
+        //    }
 
-            if (userParam.Username != user.Username) {
-                // username has changed so check if the new username is already taken
-                if (_context.Users.Any(x => x.Username == userParam.Username))
-                    return "Username " + userParam.Username + " is already taken";
-            }
+        //    if (userParam.Username != user.Username) {
+        //        // username has changed so check if the new username is already taken
+        //        if (_context.Users.Any(x => x.Username == userParam.Username))
+        //            return "Username " + userParam.Username + " is already taken";
+        //    }
 
-            user.FirstName = userParam.FirstName;
-            user.LastName = userParam.LastName;
-            user.Username = userParam.Username;
+        //    user.FirstName = userParam.FirstName;
+        //    user.LastName = userParam.LastName;
+        //    user.Username = userParam.Username;
 
-            if (!(CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt))) {
-                return "Failed creating password";
-            }
+        //    if (!(CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt))) {
+        //        return "Failed creating password";
+        //    }
 
-            user.PasswordHash = passwordHash;
-            user.PasswordSalt = passwordSalt;
+        //    user.PasswordHash = passwordHash;
+        //    user.PasswordSalt = passwordSalt;
 
-            _context.Users.Update(user);
-            _context.SaveChanges();
+        //    _context.Users.Update(user);
+        //    _context.SaveChanges();
 
-            return "";
-        }
+        //    return "";
+        //}
 
-        public void Delete(string id) {
-            var user = Get(id);
-            if (user != null) {
-                _context.Remove(user);
-                _context.SaveChanges();
-            }
-        }
+        //public void Delete(string userId) {
+        //    var user = GetUser(userId);
+        //    if (user != null) {
+        //        _context.Remove(user);
+        //        _context.SaveChanges();
+        //    }
+        //}
 
         private static bool CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt) {
             if (password == null) {
@@ -150,6 +160,65 @@ namespace WeatherJournalBackend.Services {
             }
 
             return true;
+        }
+
+        public void AddJournals(string userId, List<Journal> journals) {
+            foreach (Journal journal in journals) {
+                journal.UserId = userId;
+                _context.Journals.Add(journal);
+            }
+
+            _context.SaveChanges();
+        }
+
+        // Returns [] if not found
+        public async Task<List<Journal>> GetJournals(string userId) {
+            var result = await _context.Journals
+              .Where(j => j.UserId == userId).ToListAsync();
+            return result;
+        }
+
+        public async Task<bool> UpdateJournals(string userId, List<Journal> newJournalList) {
+            var oldJournalRows = await _context.Journals
+              .Where(j => j.UserId == userId).ToListAsync();
+            if (oldJournalRows.Any()) {
+                _context.Journals.RemoveRange(oldJournalRows);
+            } else {
+                return false;
+            }
+            _context.SaveChanges();
+
+            foreach (Journal journal in newJournalList) {
+                journal.UserId = userId;
+                _context.Journals.Add(journal);
+            }
+
+            _context.SaveChanges();
+            return true;
+        }
+
+        // Initial settings when user is registered
+        public void SetSettings(string userId) {
+            var initSettings = new Settings {
+                UserId = userId,
+                TempUnit = "C"
+            };
+            _context.Settings.Add(initSettings);
+
+            _context.SaveChanges();
+        }
+
+        public async Task<bool> UpdateSettings(string userId, Settings newSettings) {
+            var existingSettings = await GetSettings(userId);
+            if (existingSettings == null) return false;
+            existingSettings.TempUnit = newSettings.TempUnit;
+            _context.SaveChanges();
+            return true;
+        }
+
+        public async Task<Settings> GetSettings(string userId) {
+            return await _context.Settings
+              .FirstOrDefaultAsync(s => s.UserId == userId);
         }
     }
 }
