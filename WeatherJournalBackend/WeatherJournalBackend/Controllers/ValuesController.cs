@@ -16,7 +16,7 @@ using Newtonsoft.Json;
 using AutoMapper;
 
 namespace WeatherJournalBackend.Controllers {
-    [Authorize]
+    //[Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ValuesController : ControllerBase {
@@ -134,7 +134,11 @@ namespace WeatherJournalBackend.Controllers {
                     }
                     break;
                 default:
-                    return BadRequest("Failed: check callTypeAPI parameter(s)");
+                    var errorStringCallType = JsonConvert.SerializeObject(new {
+                        ok = false,
+                        message = "Failed: check callTypeAPI parameter(s)"
+                    });
+                    return BadRequest(errorStringCallType);
             }
 
             if (responseStr == null) {
@@ -147,10 +151,18 @@ namespace WeatherJournalBackend.Controllers {
                 _weatherService.AddWeatherObject(newWeatherObj, weatherObjIdToAssign);
             } else {
                 if (!(await _weatherService.UpdateWeatherObject(newWeatherObj, weatherObjIdToAssign))) {
-                    return BadRequest("Object to update not found in database");
+                    var errorStringNotFound = JsonConvert.SerializeObject(new {
+                        ok = false,
+                        message = "Object to update not found in database"
+                    });
+                    return BadRequest(errorStringNotFound);
                 }
             }
-            return Ok("Success: object added to database " + responseStr);
+            var successString = JsonConvert.SerializeObject(new {
+                ok = true,
+                weatherObjectStr = responseStr
+            });
+            return Ok(successString);
         }
 
         //[HttpGet("test/{id}")]
@@ -174,11 +186,6 @@ namespace WeatherJournalBackend.Controllers {
         //    //var result = await _weatherService.GetWeatherObject(id);
         //    //return Ok(result);
         //}
-
-        // PUT api/values/5
-        [HttpPut("{id}")]
-        public void Put(int id, [FromBody] string value) {
-        }
 
         // DELETE api/values/coord/5
         [HttpDelete("{objectType}/{weatherObjectId}")]
@@ -239,7 +246,7 @@ namespace WeatherJournalBackend.Controllers {
             } else {
                 var errorString = JsonConvert.SerializeObject(new {
                     ok = false,
-                    message = "Username already exists"
+                    message = userResult
                 });
                 return BadRequest(errorString);
             }
@@ -284,46 +291,67 @@ namespace WeatherJournalBackend.Controllers {
             return Ok(successString);
         }
 
-        //[HttpGet("user/{id}")]
-        //public ActionResult<UserDto> Get(string id) {
-        //    var user = _userService.GetUser(id);
-        //    if (user == null) {
-        //        var errorString = JsonConvert.SerializeObject(new {
-        //            ok = false,
-        //            message = "User not found"
-        //        });
-        //        return BadRequest(errorString);
-        //    }
-        //    var userDto = _mapper.Map<UserDto>(user);
-        //    var successString = JsonConvert.SerializeObject(new {
-        //        ok = true,
-        //        user = userDto,
-        //    });
-        //    return Ok(successString);
-        //}
+        [HttpGet("user/{id}")]
+        public ActionResult<UserDto> GetUser(string id) {
+            var user = _userService.GetUser(id);
 
-        //[HttpPost("user/{id}")]
-        //public ActionResult<byte[]> Update(string id, [FromBody]UserDto userDto) {
-        //    var user = _mapper.Map<User>(userDto);
-        //    user.Id = id;
+            if (user == null) {
+                return BadRequest(null);
+            }
 
-        //    var result = _userService.Update(user, userDto.Password);
-        //    if (result == "") {
-        //        return Ok();
-        //    }
-        //    return BadRequest(result);
-        //}
+            var userDto = _mapper.Map<UserDto>(user);
+            var userDtoStr = JsonConvert.SerializeObject(userDto);
+            return Ok(userDtoStr);
+        }
 
-        //[HttpDelete("user/{id}")]
-        //public ActionResult<string> Delete(string id) {
-        //    _userService.Delete(id);
-        //    return Ok();
-        //}
+        [HttpPost("user/profile/{userId}")]
+        public ActionResult<string> UpdateProfile(string userId, [FromBody]UserDto userDto) {
+            var user = _mapper.Map<User>(userDto);
+            user.Id = userId;
+            var result = _userService.UpdateFirstLastName(user);
+
+            if (result != "") return BadRequest(new { message = result });
+
+            return Ok(new { message = "User profile updated" });
+        }
+
+        [HttpPost("user/username/{userId}")]
+        public ActionResult<string> UpdateUsername(string userId, [FromBody]UserDto userDto) {
+            var user = _mapper.Map<User>(userDto);
+            user.Id = userId;
+            var result = _userService.UpdateUsername(user);
+
+            if (result != "") return BadRequest(new { message = result });
+
+            return Ok(new { message = "Username updated" });
+        }
+
+        [HttpPost("user/password/{userId}/{oldPassword}")]
+        public ActionResult<string> UpdatePassword(
+            string userId,
+            string oldPassword,
+            [FromBody]UserDto userDto
+        ){
+            var user = _mapper.Map<User>(userDto);
+            user.Id = userId;
+            var result = _userService.UpdatePassword(user, oldPassword, userDto.Password);
+
+            if (result != "") return BadRequest(new { message = result });
+
+            return Ok(new { message = "Password updated" });
+        }
+
+        [HttpDelete("user/{id}")]
+        public ActionResult<string> Delete(string id) {
+            _userService.Delete(id);
+            return Ok();
+        }
 
         [HttpPost("user/journal-list")]
         public async Task<ActionResult<string>> SetJournals([FromBody]UserDto userDto) {
             bool journalsIsExist = false;
             var user = _mapper.Map<User>(userDto);
+
             if (_userService.GetUser(user.Id) == null) {
                 var errorString = JsonConvert.SerializeObject(new {
                     ok = false,
@@ -331,6 +359,7 @@ namespace WeatherJournalBackend.Controllers {
                 });
                 return BadRequest(errorString);
             }
+
             var journals = _userService.GetJournals(user.Id);
             if (journals.Result != null) journalsIsExist = true;
 
@@ -357,9 +386,10 @@ namespace WeatherJournalBackend.Controllers {
         public async Task<ActionResult<string>> GetJournalList(string userId) {
             var result = await _userService.GetJournals(userId);
             var journals = _mapper.Map<List<JournalDto>>(result);
+            if (journals == null) journals = new List<JournalDto>();
             var successString1 = JsonConvert.SerializeObject(new {
                 ok = true,
-                journalList = journals,
+                journalList = journals
             });
             return Ok(successString1);
         }
@@ -368,37 +398,21 @@ namespace WeatherJournalBackend.Controllers {
         public ActionResult<string> UpdateSettings([FromBody]SettingsDto settingsDto) {
             var settings = _mapper.Map<Settings>(settingsDto);
             var result = _userService.UpdateSettings(settings.UserId, settings);
-            if (result.Result) {
-                var successString = JsonConvert.SerializeObject(new {
-                    ok = true,
-                    message = "Settings updated"
-                });
-                return Ok(successString);
-            } else {
-                var errorString = JsonConvert.SerializeObject(new {
-                    ok = false,
-                    message = "Settings not found"
-                });
-                return BadRequest(errorString);
-            }
+
+            if (!result.Result) return BadRequest(new { message = "Settings not found" });
+
+            return Ok(new { message = "Settings updated" });
         }
 
         [HttpGet("user/settings/{id}")]
         public ActionResult<Settings> GetSettings(string id) {
             var result = _userService.GetSettings(id);
-            if (result.Result == null) {
-                var errorString = JsonConvert.SerializeObject(new {
-                    ok = false,
-                    message = "Settings not found"
-                });
-                return BadRequest(errorString);
-            } else {
-                var successString = JsonConvert.SerializeObject(new {
-                    ok = true,
-                    settings = result.Result
-                });
-                return Ok(successString);
-            }
+
+            if (result == null) return BadRequest(new { message = "Settings not found" });
+
+            var settingsDto = _mapper.Map<Settings>(result.Result);
+            var settingsDtoStr = JsonConvert.SerializeObject(settingsDto);
+            return Ok(settingsDtoStr);
         }
     }
 }

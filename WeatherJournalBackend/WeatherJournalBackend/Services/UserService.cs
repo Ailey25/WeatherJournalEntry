@@ -11,8 +11,10 @@ namespace WeatherJournalBackend.Services {
         User Authenticate(string username, string password);
         User GetUser(string id);
         string Create(User user, string password);
-        //string Update(User user, string password);
-        //void Delete(string username);
+        string UpdateFirstLastName(User userParam);
+        string UpdateUsername(User userParam);
+        string UpdatePassword(User userParam, string oldPassword, string newPassword);
+        void Delete(string username);
 
         void AddJournals(string userId, List<Journal> journals);
         Task<List<Journal>> GetJournals(string userId);
@@ -72,47 +74,70 @@ namespace WeatherJournalBackend.Services {
             return "";
         }
 
-        //public string Update(User userParam, string password) {
-        //    var user = GetUser(userParam.Id);
+        public string UpdateFirstLastName(User userParam) {
+            var user = GetUser(userParam.Id);
 
-        //    if (string.IsNullOrWhiteSpace(password)) {
-        //        return "password cannot be null";
-        //    }
+            if (user == null) return "User not found";
 
-        //    if (user == null) {
-        //        return "User not found";
-        //    }
+            user.FirstName = userParam.FirstName;
+            user.LastName = userParam.LastName;
 
-        //    if (userParam.Username != user.Username) {
-        //        // username has changed so check if the new username is already taken
-        //        if (_context.Users.Any(x => x.Username == userParam.Username))
-        //            return "Username " + userParam.Username + " is already taken";
-        //    }
+            _context.Users.Update(user);
+            _context.SaveChanges();
 
-        //    user.FirstName = userParam.FirstName;
-        //    user.LastName = userParam.LastName;
-        //    user.Username = userParam.Username;
+            return "";
+        }
 
-        //    if (!(CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt))) {
-        //        return "Failed creating password";
-        //    }
+        public string UpdateUsername(User userParam) {
+            var user = GetUser(userParam.Id);
 
-        //    user.PasswordHash = passwordHash;
-        //    user.PasswordSalt = passwordSalt;
+            if (user == null) return "User not found";
 
-        //    _context.Users.Update(user);
-        //    _context.SaveChanges();
+            if (userParam.Username != user.Username) {
+                // username has changed so check if the new username is already taken
+                if (_context.Users.Any(x => x.Username == userParam.Username))
+                    return "Username " + userParam.Username + " is already taken";
+            }
 
-        //    return "";
-        //}
+            user.Username = userParam.Username;
 
-        //public void Delete(string userId) {
-        //    var user = GetUser(userId);
-        //    if (user != null) {
-        //        _context.Remove(user);
-        //        _context.SaveChanges();
-        //    }
-        //}
+            _context.Users.Update(user);
+            _context.SaveChanges();
+
+            return "";
+        }
+
+        public string UpdatePassword(User userParam, string oldPassword, string newPassword) {
+            var user = GetUser(userParam.Id);
+            if (user == null) return "User not found";
+
+            if (string.IsNullOrWhiteSpace(newPassword)) {
+                return "New password cannot be null";
+            }
+
+            var authenticateResult = Authenticate(user.Username, oldPassword);
+            if (authenticateResult == null) return "Old password is incorrect";
+
+            if (!(CreatePasswordHash(newPassword, out byte[] passwordHash, out byte[] passwordSalt))) {
+                return "Failed creating password";
+            }
+
+            user.PasswordHash = passwordHash;
+            user.PasswordSalt = passwordSalt;
+
+            _context.Users.Update(user);
+            _context.SaveChanges();
+
+            return "";
+        }
+
+        public void Delete(string userId) {
+            var user = GetUser(userId);
+            if (user != null) {
+                _context.Remove(user);
+                _context.SaveChanges();
+            }
+        }
 
         private static bool CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt) {
             if (password == null) {
@@ -171,11 +196,12 @@ namespace WeatherJournalBackend.Services {
             _context.SaveChanges();
         }
 
-        // Returns [] if not found
+        // Returns null if not found
         public async Task<List<Journal>> GetJournals(string userId) {
             var result = await _context.Journals
               .Where(j => j.UserId == userId).ToListAsync();
-            return result;
+            if (result.Any()) return result;
+            return null;
         }
 
         public async Task<bool> UpdateJournals(string userId, List<Journal> newJournalList) {

@@ -16,7 +16,7 @@ namespace WeatherJournalBackend.Dtos {
         public string JournalId { get; set; }
         public string Title { get; set; }
         public string Entry { get; set; }
-        public string CallType { get; set; }
+        public string CityId { get; set; }
     }
 
     public class SettingsDto {
