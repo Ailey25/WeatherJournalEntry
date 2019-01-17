@@ -16,7 +16,7 @@ using Newtonsoft.Json;
 using AutoMapper;
 
 namespace WeatherJournalBackend.Controllers {
-    //[Authorize]
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ValuesController : ControllerBase {
@@ -234,42 +234,24 @@ namespace WeatherJournalBackend.Controllers {
             var user = _mapper.Map<User>(userDto);
             var userResult = _userService.Create(user, userDto.Password);
 
-            if (userResult == "") {
-                // set user settings if registered osuccessfully
-                _userService.SetSettings(user.Id);
+            if (userResult != "") return BadRequest(new { message = userResult });
 
-                var successString = JsonConvert.SerializeObject(new {
-                    ok = true,
-                    message = "User registered"
-                });
-                return Ok(successString);
-            } else {
-                var errorString = JsonConvert.SerializeObject(new {
-                    ok = false,
-                    message = userResult
-                });
-                return BadRequest(errorString);
-            }
+            _userService.SetSettings(user.Id);
+            return Ok(new { message = "User registered" });
         }
 
         [AllowAnonymous]
         [HttpPost("user/authenticate")]
         public IActionResult Authenticate([FromBody]UserDto userDto) {
             var userObject = _userService.Authenticate(userDto.Username, userDto.Password);
-            var errorString = JsonConvert.SerializeObject(new {
-                ok = false,
-                message = "Username or password is incorrect"
-            });
-            if (userObject == null) {
-                return BadRequest(errorString);
-            }
+            if (userObject == null) return BadRequest(new { message = "Username or password is incorrect" });
 
             var tokenHandler = new JwtSecurityTokenHandler();
             var key = Encoding.ASCII.GetBytes(Configuration.GetSection("AppSettings:Secret").Value);
             var tokenDescriptor = new SecurityTokenDescriptor {
                 Subject = new ClaimsIdentity(new Claim[]
                 {
-                    new Claim(ClaimTypes.Name, userObject.Id)
+            new Claim(ClaimTypes.Name, userObject.Id)
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -278,30 +260,26 @@ namespace WeatherJournalBackend.Controllers {
             var tokenString = tokenHandler.WriteToken(token);
 
             // return basic user info (without password) and token to store client side
-            var successString = JsonConvert.SerializeObject(new {
-                ok = true,
-                user = new {
-                    Id = userObject.Id,
-                    Username = userObject.Username,
-                    FirstName = userObject.FirstName,
-                    LastName = userObject.LastName,
-                    Token = tokenString
-                }
-            });
-            return Ok(successString);
+            var user = new {
+                Id = userObject.Id,
+                Username = userObject.Username,
+                FirstName = userObject.FirstName,
+                LastName = userObject.LastName,
+                Token = tokenString
+            };
+
+            var userStr = JsonConvert.SerializeObject(user);
+            return Ok(userStr);
         }
 
         [HttpGet("user/{id}")]
         public ActionResult<UserDto> GetUser(string id) {
             var user = _userService.GetUser(id);
 
-            if (user == null) {
-                return BadRequest(null);
-            }
+            if (user == null) return BadRequest(new { message = "User not found" });
 
             var userDto = _mapper.Map<UserDto>(user);
-            var userDtoStr = JsonConvert.SerializeObject(userDto);
-            return Ok(userDtoStr);
+            return Ok(JsonConvert.SerializeObject(userDto));
         }
 
         [HttpPost("user/profile/{userId}")]
