@@ -5,8 +5,7 @@ namespace WeatherJournalBackend.Dtos {
         public double Lon { get; set; }
         public double Lat { get; set; }
 
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObjectDto WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class WeatherDto {
@@ -16,8 +15,7 @@ namespace WeatherJournalBackend.Dtos {
         public string Icon { get; set; }
         public int WeatherId { get; set; }
 
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObjectDto WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class MainDto {
@@ -29,23 +27,20 @@ namespace WeatherJournalBackend.Dtos {
         public double Sea_level { get; set; }
         public double Grnd_level { get; set; }
 
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObjectDto WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class WindDto {
         public double Speed { get; set; }
         public double Deg { get; set; }
 
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObjectDto WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class CloudsDto {
         public int All { get; set; }
 
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObjectDto WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class SysDto {
@@ -56,8 +51,7 @@ namespace WeatherJournalBackend.Dtos {
         public int Sunrise { get; set; }
         public int Sunset { get; set; }
 
-        public virtual string WeatherObjectId { get; set; }
-        public virtual WeatherObjectDto WeatherObject { get; set; }
+        public string WeatherObjectId { get; set; }
     }
 
     public class WeatherObjectDto {

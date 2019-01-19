@@ -41,18 +41,37 @@ namespace WeatherJournalBackend.Data {
 
             modelBuilder.Entity<WeatherObject>()
                         .HasKey(wo => wo.WeatherObjectId);
+
             modelBuilder.Entity<WeatherObject>()
-                        .HasOne(wo => wo.Coord);
+                        .HasOne(wo => wo.Coord)
+                        .WithOne(c => c.WeatherObject)
+                        .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<WeatherObject>()
-                        .HasMany(wo => wo.Weather);
+                        .HasMany(wo => wo.Weather)
+                        .WithOne(w => w.WeatherObject)
+                        .HasForeignKey(w => w.WeatherObjectId)
+                        .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<WeatherObject>()
-                        .HasOne(wo => wo.Main);
+                        .HasOne(wo => wo.Main)
+                        .WithOne(c => c.WeatherObject)
+                        .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<WeatherObject>()
-                        .HasOne(wo => wo.Wind);
+                        .HasOne(wo => wo.Wind)
+                        .WithOne(c => c.WeatherObject)
+                        .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<WeatherObject>()
-                        .HasOne(wo => wo.Clouds);
+                        .HasOne(wo => wo.Clouds)
+                        .WithOne(c => c.WeatherObject)
+                        .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<WeatherObject>()
-                        .HasOne(wo => wo.Sys);
+                        .HasOne(wo => wo.Sys)
+                        .WithOne(c => c.WeatherObject)
+                        .OnDelete(DeleteBehavior.Cascade);
         }
     }
 }

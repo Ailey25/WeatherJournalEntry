@@ -16,8 +16,7 @@ namespace WeatherJournalBackend.Services {
         Task<WeatherObject> GetWeatherObject(string weatherObjId);
         void AddWeatherObject(WeatherObject weatherObject, string weatherObjId);
         Task<bool> UpdateWeatherObject(WeatherObject newWeatherObject, string weatherObjId);
-        Task<string> DeleteWeatherList(string weatherObjId);
-        void DeleteObject<T>(T item) where T : class;
+        Task<bool> DeleteWeatherObject(string weatherObjectId);
     }
 
     public class WeatherService: IWeatherService {
@@ -109,22 +108,14 @@ namespace WeatherJournalBackend.Services {
             return true;
         }
 
-        // DELETE
-        public async Task<string> DeleteWeatherList(string weatherObjId) {
-            var list = await _context.Weathers
-                .Where(w => w.WeatherObjectId == weatherObjId).ToListAsync();
-            if (list.Any()) {
-                list.ForEach(elem => _context.Remove(elem));
-                _context.SaveChanges();
-                return "Success: Weather(s) deleted from database";
-            } else {
-                return "Failed: Weather not found in database";
-            }
-        }
+        public async Task<bool> DeleteWeatherObject(string weatherObjectId) {
+            var weatherObject = await GetWeatherObject(weatherObjectId);
 
-        public void DeleteObject<T>(T item) where T : class {
-            _context.Remove(item);
+            if (weatherObject == null) return false;
+
+            _context.Remove(weatherObject);
             _context.SaveChanges();
+            return true;
         }
     }
 }

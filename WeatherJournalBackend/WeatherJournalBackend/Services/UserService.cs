@@ -14,7 +14,7 @@ namespace WeatherJournalBackend.Services {
         string UpdateFirstLastName(User userParam);
         string UpdateUsername(User userParam);
         string UpdatePassword(User userParam, string oldPassword, string newPassword);
-        void Delete(string username);
+        bool DeleteUser(string userId);
 
         void AddJournals(string userId, List<Journal> journals);
         Task<List<Journal>> GetJournals(string userId);
@@ -131,12 +131,14 @@ namespace WeatherJournalBackend.Services {
             return "";
         }
 
-        public void Delete(string userId) {
+        public bool DeleteUser(string userId) {
             var user = GetUser(userId);
-            if (user != null) {
-                _context.Remove(user);
-                _context.SaveChanges();
-            }
+
+            if (user == null) return false;
+           
+            _context.Remove(user);
+            _context.SaveChanges();
+            return true;
         }
 
         private static bool CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt) {
