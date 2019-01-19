@@ -19,8 +19,17 @@ namespace WeatherJournalBackend.Data {
         protected override void OnModelCreating(ModelBuilder modelBuilder) {
             modelBuilder.Entity<User>()
                         .HasKey(u => u.Id);
+
             modelBuilder.Entity<User>()
-                        .HasMany(u => u.Journals);
+                        .HasOne(u => u.Settings)
+                        .WithOne(s => s.User)
+                        .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<User>()
+                        .HasMany(u => u.Journals)
+                        .WithOne(j => j.User)
+                        .HasForeignKey(j => j.UserId)
+                        .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Journal>()
                         .HasKey(j => j.JournalId);

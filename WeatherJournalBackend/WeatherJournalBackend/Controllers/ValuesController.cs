@@ -327,49 +327,28 @@ namespace WeatherJournalBackend.Controllers {
 
         [HttpPost("user/journal-list")]
         public async Task<ActionResult<string>> SetJournals([FromBody]UserDto userDto) {
-            bool journalsIsExist = false;
             var user = _mapper.Map<User>(userDto);
 
-            if (_userService.GetUser(user.Id) == null) {
-                var errorString = JsonConvert.SerializeObject(new {
-                    ok = false,
-                    message = "User not found"
-                });
-                return BadRequest(errorString);
-            }
+            var userResult = _userService.GetUser(user.Id);
+            if (userResult == null) return BadRequest(new { message = "User not found" });
 
-            var journals = _userService.GetJournals(user.Id);
-            if (journals.Result != null) journalsIsExist = true;
-
-            if (journalsIsExist) {
+            var journalsResult = _userService.GetJournals(user.Id);
+            if (journalsResult.Result != null) {
                 if (!(await _userService.UpdateJournals(user.Id, user.Journals))) {
-                    var errorString = JsonConvert.SerializeObject(new {
-                        ok = false,
-                        message = "Could not update journals in database"
-                    });
-                    return BadRequest(errorString);
+                    return BadRequest(new { message = "Could not update journals in database" });
                 }
-            } else {
-                _userService.AddJournals(user.Id, user.Journals);
+                return Ok(new { message = "Journals updated" });
             }
 
-            var successString = JsonConvert.SerializeObject(new {
-                ok = true,
-                message = "Journals updated/added"
-            });
-            return Ok(successString);
+            _userService.AddJournals(user.Id, user.Journals);
+            return Ok(new { message = "Journals added" });
         }
 
         [HttpGet("user/journal-list/{userId}")]
         public async Task<ActionResult<string>> GetJournalList(string userId) {
             var result = await _userService.GetJournals(userId);
             var journals = _mapper.Map<List<JournalDto>>(result);
-            if (journals == null) journals = new List<JournalDto>();
-            var successString1 = JsonConvert.SerializeObject(new {
-                ok = true,
-                journalList = journals
-            });
-            return Ok(successString1);
+            return Ok(JsonConvert.SerializeObject(journals));
         }
 
         [HttpPost("user/settings")]
