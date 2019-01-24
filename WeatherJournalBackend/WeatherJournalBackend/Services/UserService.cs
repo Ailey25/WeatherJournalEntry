@@ -1,35 +1,33 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
 using WeatherJournalBackend.Entities;
-using WeatherJournalBackend.Data;
+using WeatherJournalBackend.UoW;
 
 namespace WeatherJournalBackend.Services {
     public interface IUserService {
         User Authenticate(string username, string password);
-        User GetUser(string id);
         string Create(User user, string password);
+        User GetUser(string userId);
         string UpdateFirstLastName(User userParam);
         string UpdateUsername(User userParam);
         string UpdatePassword(User userParam, string oldPassword, string newPassword);
         bool DeleteUser(string userId);
 
         void AddJournals(string userId, List<Journal> journals);
-        Task<List<Journal>> GetJournals(string userId);
-        Task<bool> UpdateJournals(string userId, List<Journal> newJournalList);
+        Settings GetSettings(string userId);
+        List<Journal> GetJournals(string userId);
+        bool UpdateJournals(string userId, List<Journal> newJournalList);
 
         void SetSettings(string userId);
-        Task<Settings> GetSettings(string userId);
-        Task<bool> UpdateSettings(string userId, Settings newSettings);
+        bool UpdateSettings(string userId, Settings newSettings);
     }
 
     public class UserService : IUserService {
-        private UserContext _context;
+        private IUnitOfWork _unitOfWork;
 
-        public UserService(UserContext context) {
-            _context = context;
+        public UserService(IUnitOfWork unitOfWork) {
+            _unitOfWork = unitOfWork;
         }
 
         public User Authenticate(string username, string password) {
@@ -37,7 +35,7 @@ namespace WeatherJournalBackend.Services {
                 return null;
             }
 
-            var user = _context.Users.FirstOrDefault(x => x.Username == username);
+            var user = _unitOfWork.UserRepository.GetUserByUsername(username);
             if (user == null) return null;
 
             if (!VerifyPasswordHash(password, user.PasswordHash, user.PasswordSalt)) {
@@ -47,17 +45,13 @@ namespace WeatherJournalBackend.Services {
             return user;
         }
 
-        public User GetUser(string id) {
-            return _context.Users.FirstOrDefault(u => u.Id == id);
-        }
-
         public string Create(User user, string password) {
             if (string.IsNullOrWhiteSpace(password)) {
                 return "password cannot be null";
             }
 
-            if (_context.Users.Any(x => x.Username == user.Username)) {
-                return "Username \"" + user.Username + "\" is already taken";
+            if (_unitOfWork.UserRepository.GetUserByUsername(user.Username) != null) {
+                return "Username " + user.Username + " is already taken";
             }
 
             if (!(CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt))) {
@@ -68,47 +62,49 @@ namespace WeatherJournalBackend.Services {
             user.PasswordSalt = passwordSalt;
             user.Id = Guid.NewGuid().ToString();
 
-            _context.Users.Add(user);
-            _context.SaveChanges();
+            _unitOfWork.UserRepository.Add(user);
 
+            _unitOfWork.SaveUserChanges();
             return "";
         }
 
+        public User GetUser(string userId) {
+            return _unitOfWork.UserRepository.GetUserById(userId);
+        }
+
         public string UpdateFirstLastName(User userParam) {
-            var user = GetUser(userParam.Id);
+            var user = _unitOfWork.UserRepository.GetUserById(userParam.Id);
 
             if (user == null) return "User not found";
 
             user.FirstName = userParam.FirstName;
             user.LastName = userParam.LastName;
 
-            _context.Users.Update(user);
-            _context.SaveChanges();
-
+            _unitOfWork.SaveUserChanges();
             return "";
         }
 
         public string UpdateUsername(User userParam) {
-            var user = GetUser(userParam.Id);
+            var user = _unitOfWork.UserRepository.GetUserById(userParam.Id);
 
             if (user == null) return "User not found";
 
             if (userParam.Username != user.Username) {
                 // username has changed so check if the new username is already taken
-                if (_context.Users.Any(x => x.Username == userParam.Username))
+                if (_unitOfWork.UserRepository.GetUserByUsername(userParam.Username) != null) {
                     return "Username " + userParam.Username + " is already taken";
+                }
             }
 
             user.Username = userParam.Username;
 
-            _context.Users.Update(user);
-            _context.SaveChanges();
-
+            _unitOfWork.SaveUserChanges();
             return "";
         }
 
         public string UpdatePassword(User userParam, string oldPassword, string newPassword) {
-            var user = GetUser(userParam.Id);
+            var user = _unitOfWork.UserRepository.GetUserById(userParam.Id);
+
             if (user == null) return "User not found";
 
             if (string.IsNullOrWhiteSpace(newPassword)) {
@@ -125,19 +121,18 @@ namespace WeatherJournalBackend.Services {
             user.PasswordHash = passwordHash;
             user.PasswordSalt = passwordSalt;
 
-            _context.Users.Update(user);
-            _context.SaveChanges();
-
+            _unitOfWork.SaveUserChanges();
             return "";
         }
 
         public bool DeleteUser(string userId) {
-            var user = GetUser(userId);
+            var user = _unitOfWork.UserRepository.GetUserById(userId);
 
             if (user == null) return false;
-           
-            _context.Remove(user);
-            _context.SaveChanges();
+
+            _unitOfWork.UserRepository.DeleteUser(user);
+
+            _unitOfWork.SaveUserChanges();
             return true;
         }
 
@@ -192,36 +187,34 @@ namespace WeatherJournalBackend.Services {
         public void AddJournals(string userId, List<Journal> journals) {
             foreach (Journal journal in journals) {
                 journal.UserId = userId;
-                _context.Journals.Add(journal);
+                _unitOfWork.UserRepository.Add(journal);
             }
 
-            _context.SaveChanges();
+            _unitOfWork.SaveUserChanges();
         }
 
-        // Returns null if not found
-        public async Task<List<Journal>> GetJournals(string userId) {
-            var result = await _context.Journals
-              .Where(j => j.UserId == userId).ToListAsync();
-            if (result.Any()) return result;
-            return null;
+        public Settings GetSettings(string userId) {
+            return _unitOfWork.UserRepository.GetSettings(userId);
         }
 
-        public async Task<bool> UpdateJournals(string userId, List<Journal> newJournalList) {
-            var oldJournalRows = await _context.Journals
-              .Where(j => j.UserId == userId).ToListAsync();
-            if (oldJournalRows.Any()) {
-                _context.Journals.RemoveRange(oldJournalRows);
-            } else {
-                return false;
-            }
-            _context.SaveChanges();
+        public List<Journal> GetJournals(string userId) {
+            return _unitOfWork.UserRepository.GetJournals(userId);
+        }
+
+        public bool UpdateJournals(string userId, List<Journal> newJournalList) {
+            var oldJournalRows = _unitOfWork.UserRepository.GetJournals(userId);
+
+            if (!oldJournalRows.Any()) return false;
+
+            _unitOfWork.UserRepository.DeleteList(oldJournalRows);
+            _unitOfWork.SaveUserChanges();
 
             foreach (Journal journal in newJournalList) {
                 journal.UserId = userId;
-                _context.Journals.Add(journal);
+                _unitOfWork.UserRepository.Add(journal);
             }
 
-            _context.SaveChanges();
+            _unitOfWork.SaveUserChanges();
             return true;
         }
 
@@ -231,22 +224,22 @@ namespace WeatherJournalBackend.Services {
                 UserId = userId,
                 TempUnit = "C"
             };
-            _context.Settings.Add(initSettings);
+            _unitOfWork.UserRepository.Add(initSettings);
 
-            _context.SaveChanges();
+            _unitOfWork.SaveUserChanges();
         }
 
-        public async Task<bool> UpdateSettings(string userId, Settings newSettings) {
-            var existingSettings = await GetSettings(userId);
+        public bool UpdateSettings(string userId, Settings newSettings) {
+            var existingSettings = _unitOfWork.UserRepository.GetSettings(userId);
+
             if (existingSettings == null) return false;
-            existingSettings.TempUnit = newSettings.TempUnit;
-            _context.SaveChanges();
-            return true;
-        }
+            if (newSettings.TempUnit != "C" && newSettings.TempUnit != "F") {
+                return false;
+            }
 
-        public async Task<Settings> GetSettings(string userId) {
-            return await _context.Settings
-              .FirstOrDefaultAsync(s => s.UserId == userId);
+            existingSettings.TempUnit = newSettings.TempUnit;
+            _unitOfWork.SaveUserChanges();
+            return true;
         }
     }
 }

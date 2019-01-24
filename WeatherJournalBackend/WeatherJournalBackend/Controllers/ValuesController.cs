@@ -59,50 +59,24 @@ namespace WeatherJournalBackend.Controllers {
         }
 
         // GET api/values/weather/1
-
         [HttpGet("{objectType}/{weatherObjectId}")]
-        public async Task<ActionResult<object>> GetObject(
-            string objectType, string weatherObjectId, string weatherId
-        ) {
+        public ActionResult<object> GetObject(string objectType, string weatherObjectId) {
+            if (objectType == WEATHER) {
+                List<Weather> weatherList = _weatherService.GetWeatherList(weatherObjectId);
 
-            ActionResult<object> result = null;
-            switch (objectType) {
-                case COORD:
-                    result = await _weatherService.GetCoord(weatherObjectId);
-                    break;
-                case WEATHER:
-                    result = await _weatherService.GetWeatherList(weatherObjectId);
-                    if (result == null) return Ok(JsonConvert.SerializeObject(new List<WeatherDto>()));
-                    break;
-                case MAIN:
-                    result = await _weatherService.GetMain(weatherObjectId);
-                    break;
-                case WIND:
-                    result = await _weatherService.GetWind(weatherObjectId);
-                    break;
-                case CLOUDS:
-                    result = await _weatherService.GetClouds(weatherObjectId);
-                    break;
-                case SYS:
-                    result = await _weatherService.GetSys(weatherObjectId);
-                    break;
-                case WEATHER_OBJECT:
-                    result = await _weatherService.GetWeatherObject(weatherObjectId);
-                    break;
-                default:
-                    return BadRequest(new { message = "Check object type parameter" });
+                if (weatherList == null) return Ok(JsonConvert.SerializeObject(new List<WeatherDto>()));
+                return Ok(JsonConvert.SerializeObject(weatherList));
+            } else {
+                object obj = _weatherService.GetObject(objectType, weatherObjectId);
+
+                if (obj == null) return BadRequest(new { message = "Object wasn't found in the database" });
+                return Ok(JsonConvert.SerializeObject(obj));
             }
-
-            if (result == null || result.Value == null) {
-                return BadRequest(new { message = "Id wasn't found in the database" });
-            }
-
-            return Ok(JsonConvert.SerializeObject(result.Value));
         }
 
         // POST api/values/cityname/5/Toronto
         [HttpPost("{callTypeAPI}/{weatherObjIdToAssign}/{callParameter1}/{callParameter2?}")]
-        public async Task<ActionResult<string>> Post(
+        public ActionResult<string> Post(
             string callTypeAPI, string weatherObjIdToAssign,
             string callParameter1, string callParameter2 = ""
         ) {
@@ -135,9 +109,9 @@ namespace WeatherJournalBackend.Controllers {
             if (responseStr == null) return BadRequest(new { message = "API call failed" });
 
             var newWeatherObj = weatherAPI.ParseWeatherDataObject(responseStr);
-            var wo = await _weatherService.GetWeatherObject(weatherObjIdToAssign);
+            var wo = _weatherService.GetObject(WEATHER_OBJECT, weatherObjIdToAssign);
             if (wo != null) { // weather object already exists, update
-                if (!(await _weatherService.UpdateWeatherObject(newWeatherObj, weatherObjIdToAssign))) {
+                if (!_weatherService.UpdateWeatherObject(newWeatherObj, weatherObjIdToAssign)) {
                     return BadRequest(new { message = "Object to update not found in database" });
                 }
             } else { // new weather object
@@ -145,6 +119,14 @@ namespace WeatherJournalBackend.Controllers {
             }
 
             return Ok(responseStr);
+        }
+
+        // DELETE api/values/weatherobject/5
+        [HttpDelete("weatherobject/{weatherObjectId}")]
+        public ActionResult<string> DeleteWeatherObject(string weatherObjectId) {
+            var isDeleted = _weatherService.DeleteWeatherObject(weatherObjectId);
+            if (!isDeleted) return BadRequest(new { message = "Id wasn't found in database" });
+            return Ok(new { message = "Weather object deleted" });
         }
 
         //[HttpGet("test/{id}")]
@@ -168,14 +150,6 @@ namespace WeatherJournalBackend.Controllers {
         //    //var result = await _weatherService.GetWeatherObject(id);
         //    //return Ok(result);
         //}
-
-        // DELETE api/values/weatherobject/5
-        [HttpDelete("weatherobject/{weatherObjectId}")]
-        public async Task<ActionResult<bool>> DeleteWeatherObject(string weatherObjectId) {
-            var isDeleted = await _weatherService.DeleteWeatherObject(weatherObjectId);
-            if (!isDeleted) return BadRequest(new { message = "Id wasn't found in database" });
-            return Ok(new { message = "Weather object deleted" });
-        }
 
         [AllowAnonymous]
         [HttpPost("user/register")]
@@ -276,27 +250,27 @@ namespace WeatherJournalBackend.Controllers {
         }
 
         [HttpPost("user/journal-list")]
-        public async Task<ActionResult<string>> SetJournals([FromBody]UserDto userDto) {
+        public ActionResult<string> SetJournals([FromBody]UserDto userDto) {
             var user = _mapper.Map<User>(userDto);
 
             var userResult = _userService.GetUser(user.Id);
             if (userResult == null) return BadRequest(new { message = "User not found" });
 
-            var journalsResult = _userService.GetJournals(user.Id);
-            if (journalsResult.Result != null) {
-                if (!(await _userService.UpdateJournals(user.Id, user.Journals))) {
+            var journals = _userService.GetJournals(user.Id);
+            if (journals != null) {
+                if (! _userService.UpdateJournals(user.Id, user.Journals)) {
                     return BadRequest(new { message = "Could not update journals in database" });
                 }
                 return Ok(new { message = "Journals updated" });
             }
 
             _userService.AddJournals(user.Id, user.Journals);
-            return Ok(new { message = "Journals added" });
+            return Ok(new { message = "Journals saved" });
         }
 
         [HttpGet("user/journal-list/{userId}")]
-        public async Task<ActionResult<string>> GetJournalList(string userId) {
-            var result = await _userService.GetJournals(userId);
+        public ActionResult<string> GetJournalList(string userId) {
+            var result = _userService.GetJournals(userId);
             var journals = _mapper.Map<List<JournalDto>>(result);
             if (journals == null) return Ok(JsonConvert.SerializeObject(new List<JournalDto>()));
             return Ok(JsonConvert.SerializeObject(journals));
@@ -307,7 +281,7 @@ namespace WeatherJournalBackend.Controllers {
             var settings = _mapper.Map<Settings>(settingsDto);
             var result = _userService.UpdateSettings(settings.UserId, settings);
 
-            if (!result.Result) return BadRequest(new { message = "Settings not found" });
+            if (!result) return BadRequest(new { message = "Settings not found" });
 
             return Ok(new { message = "Settings updated" });
         }
@@ -318,7 +292,7 @@ namespace WeatherJournalBackend.Controllers {
 
             if (result == null) return BadRequest(new { message = "Settings not found" });
 
-            var settingsDto = _mapper.Map<Settings>(result.Result);
+            var settingsDto = _mapper.Map<Settings>(result);
             var settingsDtoStr = JsonConvert.SerializeObject(settingsDto);
             return Ok(settingsDtoStr);
         }

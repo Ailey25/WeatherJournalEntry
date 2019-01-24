@@ -3,98 +3,87 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using WeatherJournalBackend.Entities;
-using WeatherJournalBackend.Data;
+using WeatherJournalBackend.UoW;
 
 namespace WeatherJournalBackend.Services {
     public interface IWeatherService {
-        Task<Coord> GetCoord(string weatherObjId);
-        Task<List<Weather>> GetWeatherList(string weatherObjId);
-        Task<Main> GetMain(string weatherObjId);
-        Task<Wind> GetWind(string weatherObjId);
-        Task<Clouds> GetClouds(string weatherObjId);
-        Task<Sys> GetSys(string weatherObjId);
-        Task<WeatherObject> GetWeatherObject(string weatherObjId);
-        void AddWeatherObject(WeatherObject weatherObject, string weatherObjId);
-        Task<bool> UpdateWeatherObject(WeatherObject newWeatherObject, string weatherObjId);
-        Task<bool> DeleteWeatherObject(string weatherObjectId);
+        object GetObject(string objectType, string weatherObjectId);
+        List<Weather> GetWeatherList(string weatherObjectId);
+        void AddWeatherObject(WeatherObject weatherObject, string weatherObjectId);
+        bool UpdateWeatherObject(WeatherObject newWeatherObject, string weatherObjectId);
+        bool DeleteWeatherObject(string weatherObjectId);
     }
 
     public class WeatherService: IWeatherService {
-        private WeatherContext _context;
+        private const string COORD = "coord";
+        private const string WEATHER = "weather";
+        private const string MAIN = "main";
+        private const string WIND = "wind";
+        private const string CLOUDS = "clouds";
+        private const string SYS = "sys";
+        private const string WEATHER_OBJECT = "weatherobject";
 
-        public WeatherService(WeatherContext context) {
-            _context = context;
+        private IUnitOfWork _unitOfWork;
+
+        public WeatherService(IUnitOfWork unitOfWork) {
+            _unitOfWork = unitOfWork;
         }
 
-        // GET
-        public async Task<Coord> GetCoord(string weatherObjId) {
-            return await _context.Coords
-                .FirstOrDefaultAsync(c => c.WeatherObjectId == weatherObjId);
+        public object GetObject(string objectType, string weatherObjectId) {
+            object result = null;
+            switch (objectType) {
+                case COORD:
+                    result = _unitOfWork.WeatherRepository.GetCoord(weatherObjectId);
+                    break;
+                case MAIN:
+                    result = _unitOfWork.WeatherRepository.GetMain(weatherObjectId);
+                    break;
+                case WIND:
+                    result = _unitOfWork.WeatherRepository.GetWind(weatherObjectId);
+                    break;
+                case CLOUDS:
+                    result = _unitOfWork.WeatherRepository.GetClouds(weatherObjectId);
+                    break;
+                case SYS:
+                    result = _unitOfWork.WeatherRepository.GetSys(weatherObjectId);
+                    break;
+                case WEATHER_OBJECT:
+                    result = _unitOfWork.WeatherRepository.GetWeatherObject(weatherObjectId);
+                    break;
+                default:
+                    return null;
+            }
+
+            return result;
         }
 
-        // Returns null if no result
-        public async Task<List<Weather>> GetWeatherList(string weatherObjId) {
-            var result = await _context.Weathers
-                .Where(w => w.WeatherObjectId == weatherObjId).ToListAsync();
-            if (result.Any()) return result;
-            return null;
+        public List<Weather> GetWeatherList(string weatherObjectId) {
+            return _unitOfWork.WeatherRepository.GetWeatherList(weatherObjectId);
         }
 
-        public async Task<Main> GetMain(string weatherObjId) {
-            return await _context.Mains
-                .FirstOrDefaultAsync(m => m.WeatherObjectId == weatherObjId);
-        }
+        public void AddWeatherObject(WeatherObject weatherObject, string weatherObjectId) {
+            weatherObject.WeatherObjectId = weatherObjectId;
+            _unitOfWork.WeatherRepository.Add(weatherObject);
 
-        public async Task<Wind> GetWind(string weatherObjId) {
-            return await _context.Winds
-                .FirstOrDefaultAsync(w => w.WeatherObjectId == weatherObjId);
-        }
-
-        public async Task<Clouds> GetClouds(string weatherObjId) {
-            return await _context.Clouds
-                .FirstOrDefaultAsync(c => c.WeatherObjectId == weatherObjId);
-        }
-
-        public async Task<Sys> GetSys(string weatherObjId) {
-            return await _context.Sys
-                .FirstOrDefaultAsync(s => s.WeatherObjectId == weatherObjId);
-        }
-
-        public async Task<WeatherObject> GetWeatherObject(string weatherObjId) {
-            return await _context.WeatherObjects
-                .FirstOrDefaultAsync(wo => wo.WeatherObjectId == weatherObjId);
-        }
-
-        // ADD TO DATABASE
-        public void AddWeatherObject(WeatherObject weatherObject, string weatherObjId) {
-            weatherObject.WeatherObjectId = weatherObjId;
-            weatherObject.Coord.WeatherObjectId = weatherObjId;
-            weatherObject.Main.WeatherObjectId = weatherObjId;
-            weatherObject.Wind.WeatherObjectId = weatherObjId;
-            weatherObject.Clouds.WeatherObjectId = weatherObjId;
-            weatherObject.Sys.WeatherObjectId = weatherObjId;
-
-            _context.WeatherObjects.Add(weatherObject);
-            _context.SaveChanges();
+            _unitOfWork.SaveWeatherChanges();
         }
 
         // UPDATE (currently only updates Main and Weather)
-        public async Task<bool> UpdateWeatherObject(WeatherObject newWeatherObject, string weatherObjId) {
-            var oldWeatherRows = await _context.Weathers
-                .Where(w => w.WeatherObjectId == weatherObjId).ToListAsync();
+        public bool UpdateWeatherObject(WeatherObject newWeatherObject, string weatherObjectId) {
+            var oldWeatherRows = _unitOfWork.WeatherRepository.GetWeatherList(weatherObjectId);
             if (oldWeatherRows.Any()) {
-                _context.Weathers.RemoveRange(oldWeatherRows);
+                _unitOfWork.WeatherRepository.DeleteList(oldWeatherRows);
             }
-            _context.SaveChanges();
+            _unitOfWork.SaveWeatherChanges();
 
             var newWeatherRows = newWeatherObject.Weather;
             foreach(Weather weather in newWeatherRows) {
-                weather.WeatherObjectId = weatherObjId;
-                _context.Weathers.Add(weather);
+                weather.WeatherObjectId = weatherObjectId;
+                _unitOfWork.WeatherRepository.Add(weather);
             }
-            _context.SaveChanges();
+            _unitOfWork.SaveWeatherChanges();
 
-            var existingMain = await GetMain(weatherObjId);
+            var existingMain = _unitOfWork.WeatherRepository.GetMain(weatherObjectId);
             if (existingMain == null) return false;
             existingMain.Temp = newWeatherObject.Main.Temp;
             existingMain.Pressure = newWeatherObject.Main.Pressure;
@@ -103,19 +92,21 @@ namespace WeatherJournalBackend.Services {
             existingMain.Temp_max = newWeatherObject.Main.Temp_max;
             existingMain.Sea_level = newWeatherObject.Main.Sea_level;
             existingMain.Grnd_level = newWeatherObject.Main.Grnd_level;
-            _context.SaveChanges();
 
+            _unitOfWork.SaveWeatherChanges();
             return true;
         }
 
-        public async Task<bool> DeleteWeatherObject(string weatherObjectId) {
-            var weatherObject = await GetWeatherObject(weatherObjectId);
+        public bool DeleteWeatherObject(string weatherObjectId) {
+            var weatherObject = _unitOfWork.WeatherRepository.GetWeatherObject(weatherObjectId);
 
             if (weatherObject == null) return false;
 
-            _context.Remove(weatherObject);
-            _context.SaveChanges();
+            _unitOfWork.WeatherRepository.Delete(weatherObject);
+
+            _unitOfWork.SaveWeatherChanges();
             return true;
         }
+
     }
 }

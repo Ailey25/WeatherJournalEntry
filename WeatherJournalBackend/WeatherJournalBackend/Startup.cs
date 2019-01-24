@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using AutoMapper;
 using WeatherJournalBackend.Data;
 using WeatherJournalBackend.Services;
+using WeatherJournalBackend.UoW;
 
 namespace WeatherJournalBackend {
     public class Startup {
@@ -55,6 +56,7 @@ namespace WeatherJournalBackend {
             // configure services
             services.AddScoped<IWeatherService, WeatherService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
