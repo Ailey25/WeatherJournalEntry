@@ -21,6 +21,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="2.1.4" />
     <PackageReference Include="AutoMapper" Version="8.0.0" />
     <PackageReference Include="AutoMapper.Extensions.Microsoft.DependencyInjection" Version="6.0.0" />
+    <PackageReference Include="NUnit" Version="3.11.0" />
+    <PackageReference Include="Moq" Version="4.10.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,5 +31,19 @@
     <Compile Remove="New Folder1\WeatherObject.cs" />
     <Compile Remove="Model\WeatherObjectModel.cs" />
     <Compile Remove="Controllers\WeathersController.cs" />
+    <Compile Remove="TestLibrary2\obj\Debug\netcoreapp2.1\TestLibrary2.Program.cs" />
+    <Compile Remove="TestLibrary\obj\Debug\netcoreapp2.1\TestLibrary.Program.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="WeatherJournalBackendTests\bin\Debug\netcoreapp2.1\WeatherJournalBackend.dll" />
+    <None Remove="WeatherJournalBackendTests\bin\Debug\netcoreapp2.1\WeatherJournalBackend.pdb" />
+    <None Remove="TestLibrary\bin\Debug\netcoreapp2.1\TestLibrary.dll" />
+    <None Remove="TestLibrary\bin\Debug\netcoreapp2.1\TestLibrary.pdb" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Remove="TestLibrary2\obj\project.assets.json" />
+    <Content Remove="TestLibrary2\obj\project.assets.json" />
+    <Content Remove="TestLibrary2\obj\project.assets.json" />
+    <Content Remove="TestLibrary\obj\project.assets.json" />
   </ItemGroup>
 </Project>
