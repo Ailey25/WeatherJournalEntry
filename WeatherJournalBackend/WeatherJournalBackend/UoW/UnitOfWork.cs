@@ -2,8 +2,8 @@
 
 namespace WeatherJournalBackend.UoW {
     public interface IUnitOfWork {
-        UserRepository UserRepository { get; }
-        WeatherRepository WeatherRepository { get; }
+        IUserRepository UserRepository { get; }
+        IWeatherRepository WeatherRepository { get; }
 
         void SaveUserChanges();
         void SaveWeatherChanges();
@@ -20,14 +20,14 @@ namespace WeatherJournalBackend.UoW {
             _weatherContext = weatherContext;
         }
 
-        public UserRepository UserRepository {
+        public IUserRepository UserRepository {
             get {
                 if (_userRepository == null) _userRepository = new UserRepository(_userContext);
                 return _userRepository;
             }
         }
 
-        public WeatherRepository WeatherRepository {
+        public IWeatherRepository WeatherRepository {
             get {
                 if (_weatherRepository == null) _weatherRepository = new WeatherRepository(_weatherContext);
                 return _weatherRepository;

@@ -18,7 +18,7 @@ namespace WeatherJournalBackend.Data {
         void DeleteList<T>(List<T> entityList) where T : class;
     }
 
-    public class WeatherRepository {
+    public class WeatherRepository : IWeatherRepository {
         private WeatherContext _weatherContext;
           
         public WeatherRepository(WeatherContext weatherContext) {
