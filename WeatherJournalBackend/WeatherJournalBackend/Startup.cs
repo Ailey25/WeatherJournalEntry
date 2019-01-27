@@ -70,6 +70,8 @@ namespace WeatherJournalBackend {
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseMvc();
+
+            //app.UseStaticFiles();
         }
     }
 }

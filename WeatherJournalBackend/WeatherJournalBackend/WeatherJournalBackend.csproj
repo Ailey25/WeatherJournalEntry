@@ -33,6 +33,7 @@
     <Compile Remove="Controllers\WeathersController.cs" />
     <Compile Remove="TestLibrary2\obj\Debug\netcoreapp2.1\TestLibrary2.Program.cs" />
     <Compile Remove="TestLibrary\obj\Debug\netcoreapp2.1\TestLibrary.Program.cs" />
+    <Compile Remove="TestLibrary\obj\Debug\netcoreapp2.1\TestLibrary.AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Remove="WeatherJournalBackendTests\bin\Debug\netcoreapp2.1\WeatherJournalBackend.dll" />
@@ -45,5 +46,6 @@
     <Content Remove="TestLibrary2\obj\project.assets.json" />
     <Content Remove="TestLibrary2\obj\project.assets.json" />
     <Content Remove="TestLibrary\obj\project.assets.json" />
+    <Content Remove="wwwroot\index.js" />
   </ItemGroup>
 </Project>
