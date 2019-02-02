@@ -21,6 +21,10 @@ namespace WeatherJournalBackend.Data {
                         .HasKey(u => u.Id);
 
             modelBuilder.Entity<User>()
+                        .HasIndex(u => u.Username)
+                        .IsUnique();
+
+            modelBuilder.Entity<User>()
                         .HasOne(u => u.Settings)
                         .WithOne(s => s.User)
                         .OnDelete(DeleteBehavior.Cascade);

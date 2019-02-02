@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
@@ -16,8 +16,9 @@ using Newtonsoft.Json;
 using AutoMapper;
 
 namespace WeatherJournalBackend.Controllers {
-    [Authorize]
     [Route("api/[controller]")]
+    [Authorize]
+    [EnableCors("AllowSpecificOrigin")]
     [ApiController]
     public class ValuesController : ControllerBase {
         private const string COORD = "coord";
@@ -47,15 +48,19 @@ namespace WeatherJournalBackend.Controllers {
         }
 
         // GET api/values
+        [AllowAnonymous]
         [HttpGet]
         public ActionResult<IEnumerable<string>> Instructionl() {
             return new string[] {
-                "GET: 'objectType/weatherObjectId' gets an object",
-                "POST: 'callTypeAPI/weatherObjectIdToAssign/param1/param2' adds the response object to database",
-                "DELETE: 'objectType/weatherObjectId' deletes an object and its dependent tables",
-                "objectType: coord, weather, main, wind, clouds, sys, weatherobject",
-                "callTypeAPI: 'cityname', 'cityid', 'coord'",
+                "This is just a backend. Go to https://weatherjournalapp.azurewebsites.net"
             };
+            //return new string[] {
+            //    "GET: 'objectType/weatherObjectId' gets an object",
+            //    "POST: 'callTypeAPI/weatherObjectIdToAssign/param1/param2' adds the response object to database",
+            //    "DELETE: 'objectType/weatherObjectId' deletes an object and its dependent tables",
+            //    "objectType: coord, weather, main, wind, clouds, sys, weatherobject",
+            //    "callTypeAPI: 'cityname', 'cityid', 'coord'",
+            //};
         }
 
         // GET api/values/weather/1

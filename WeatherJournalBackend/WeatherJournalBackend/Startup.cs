@@ -35,7 +35,6 @@ namespace WeatherJournalBackend {
 
             // configure JWT authentication
             var key = Encoding.ASCII.GetBytes(Configuration.GetSection("AppSettings:Secret").Value);
-
             services.AddAuthentication(x => {
                 x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -50,7 +49,17 @@ namespace WeatherJournalBackend {
                     };
                 });
 
+            services.AddCors(options => {
+                options.AddPolicy("AllowSpecificOrigin", builder =>
+                    builder.WithOrigins(
+                        "http://localhost:3000",                        // frontend development
+                        "https://weatherjournalapp.azurewebsites.net"   // frontend production
+                    ).AllowAnyMethod().AllowAnyHeader()
+                );
+            });
+
             services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+
             services.AddAutoMapper();
 
             // configure services
@@ -66,7 +75,7 @@ namespace WeatherJournalBackend {
             } else {
                 app.UseHsts();
             }
-
+            app.UseCors("AllowSpecificOrigin");
             app.UseHttpsRedirection();
             app.UseAuthentication();
             app.UseMvc();

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Entity.Infrastructure;
 using System.Linq;
+using Microsoft.Data.Sqlite;
 using WeatherJournalBackend.Entities;
 using WeatherJournalBackend.UoW;
 
@@ -46,26 +48,33 @@ namespace WeatherJournalBackend.Services {
         }
 
         public string Create(User user, string password) {
-            if (string.IsNullOrWhiteSpace(password)) {
-                return "password cannot be null";
+            try {
+                if (string.IsNullOrWhiteSpace(password)) {
+                    return "password cannot be null";
+                }
+
+                if (!(CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt))) {
+                    return "Failed creating password";
+                }
+
+                user.PasswordHash = passwordHash;
+                user.PasswordSalt = passwordSalt;
+                user.Id = Guid.NewGuid().ToString();
+
+                _unitOfWork.UserRepository.Add(user);
+                _unitOfWork.SaveUserChanges();
+
+                return "";
+            } catch (Exception ex) when (ex.InnerException is SqliteException sqliteException) {
+                switch(sqliteException.SqliteErrorCode) {
+                    case 19:
+                        return "Username " + user.Username + " is already taken";
+                    default:
+                        throw;
+                }
+            } catch (Exception ex) {
+                return "User can't be created";
             }
-
-            if (_unitOfWork.UserRepository.GetUserByUsername(user.Username) != null) {
-                return "Username " + user.Username + " is already taken";
-            }
-
-            if (!(CreatePasswordHash(password, out byte[] passwordHash, out byte[] passwordSalt))) {
-                return "Failed creating password";
-            }
-
-            user.PasswordHash = passwordHash;
-            user.PasswordSalt = passwordSalt;
-            user.Id = Guid.NewGuid().ToString();
-
-            _unitOfWork.UserRepository.Add(user);
-
-            _unitOfWork.SaveUserChanges();
-            return "";
         }
 
         public User GetUser(string userId) {
@@ -79,27 +88,31 @@ namespace WeatherJournalBackend.Services {
 
             user.FirstName = userParam.FirstName;
             user.LastName = userParam.LastName;
-
             _unitOfWork.SaveUserChanges();
+
             return "";
         }
 
         public string UpdateUsername(User userParam) {
-            var user = _unitOfWork.UserRepository.GetUserById(userParam.Id);
+            try {
+                var user = _unitOfWork.UserRepository.GetUserById(userParam.Id);
 
-            if (user == null) return "User not found";
+                if (user == null) return "User not found";
 
-            if (userParam.Username != user.Username) {
-                // username has changed so check if the new username is already taken
-                if (_unitOfWork.UserRepository.GetUserByUsername(userParam.Username) != null) {
-                    return "Username " + userParam.Username + " is already taken";
+                user.Username = userParam.Username;
+                _unitOfWork.SaveUserChanges();
+
+                return "";
+            } catch (Exception ex) when (ex.InnerException is SqliteException sqliteException) {
+                switch (sqliteException.SqliteErrorCode) {
+                    case 19:
+                        return "Username " + userParam.Username + " is already taken";
+                    default:
+                        throw;
                 }
+            } catch (Exception ex) {
+                return "Username can't be updated";
             }
-
-            user.Username = userParam.Username;
-
-            _unitOfWork.SaveUserChanges();
-            return "";
         }
 
         public string UpdatePassword(User userParam, string oldPassword, string newPassword) {
@@ -120,8 +133,8 @@ namespace WeatherJournalBackend.Services {
 
             user.PasswordHash = passwordHash;
             user.PasswordSalt = passwordSalt;
-
             _unitOfWork.SaveUserChanges();
+
             return "";
         }
 
@@ -131,8 +144,8 @@ namespace WeatherJournalBackend.Services {
             if (user == null) return false;
 
             _unitOfWork.UserRepository.DeleteUser(user);
-
             _unitOfWork.SaveUserChanges();
+
             return true;
         }
 
@@ -213,8 +226,8 @@ namespace WeatherJournalBackend.Services {
                 journal.UserId = userId;
                 _unitOfWork.UserRepository.Add(journal);
             }
-
             _unitOfWork.SaveUserChanges();
+
             return true;
         }
 
@@ -239,6 +252,7 @@ namespace WeatherJournalBackend.Services {
 
             existingSettings.TempUnit = newSettings.TempUnit;
             _unitOfWork.SaveUserChanges();
+
             return true;
         }
     }
